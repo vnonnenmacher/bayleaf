@@ -1,18 +1,16 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .serializers import PatientCreateSerializer
+from rest_framework import generics
+from .serializers import PatientSerializer
+from rest_framework.permissions import IsAuthenticated
 
 
-class PatientCreateView(APIView):
-    permission_classes = []  # No authentication required
+class PatientCreateView(generics.CreateAPIView):
+    serializer_class = PatientSerializer
+    permission_classes = []  # No authentication required for sign-up
 
-    def post(self, request):
-        serializer = PatientCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            patient = serializer.save()
-            return Response(
-                {"message": "Patient created successfully", "pid": patient.pid},
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PatientRetrieveView(generics.RetrieveAPIView):
+    serializer_class = PatientSerializer
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access
+
+    def get_object(self):
+        return self.request.user
