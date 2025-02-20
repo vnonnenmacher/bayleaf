@@ -1,28 +1,65 @@
 from rest_framework import serializers
 from .models import Shift
 from .models import Doctor
+from core.serializers import AddressSerializer, ContactSerializer
+from core.models import Address, Contact
 
 
 class DoctorSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8, required=False)
+    """Serializer for creating a Doctor with Address & Contact fields."""
+    
+    address1 = AddressSerializer(required=False)
+    address2 = AddressSerializer(required=False)
+    primary_contact = ContactSerializer(required=False)
+    secondary_contact = ContactSerializer(required=False)
 
     class Meta:
         model = Doctor
-        fields = ["did", "email", "password", "first_name", "last_name", "birth_date"]
-        extra_kwargs = {
-            "did": {"read_only": True},  # DID should not be editable after creation
-            "email": {"read_only": False}  # Allow email to be passed correctly
-        }
+        fields = [
+            "did", 
+            "first_name", 
+            "last_name", 
+            "birth_date", 
+            "email", 
+            "password", 
+            "address1", 
+            "address2", 
+            "primary_contact", 
+            "secondary_contact"
+        ]
+        extra_kwargs = {"password": {"write_only": True}}  # Make password write-only
 
     def create(self, validated_data):
-        """Create a new doctor with an encrypted password"""
-        password = validated_data.pop("password", None)
-        email = validated_data.pop("email")  # Extract email explicitly
+        """Handles nested Address and Contact creation when creating a Doctor."""
 
-        doctor = Doctor.objects.create_user(email=email, **validated_data)  # Pass email correctly
-        if password:
-            doctor.set_password(password)
-            doctor.save()
+        # Extract nested data
+        address1_data = validated_data.pop("address1", None)
+        address2_data = validated_data.pop("address2", None)
+        primary_contact_data = validated_data.pop("primary_contact", None)
+        secondary_contact_data = validated_data.pop("secondary_contact", None)
+
+        # Create doctor (without address and contact)
+        doctor = Doctor.objects.create(**validated_data)
+        doctor.set_password(validated_data["password"])  # Hash password
+        doctor.save()
+
+        # Create and link Address1 if provided
+        if address1_data:
+            doctor.address1 = Address.objects.create(**address1_data)
+
+        # Create and link Address2 if provided
+        if address2_data:
+            doctor.address2 = Address.objects.create(**address2_data)
+
+        # Create and link Primary Contact if provided
+        if primary_contact_data:
+            doctor.primary_contact = Contact.objects.create(**primary_contact_data)
+
+        # Create and link Secondary Contact if provided
+        if secondary_contact_data:
+            doctor.secondary_contact = Contact.objects.create(**secondary_contact_data)
+
+        doctor.save()
         return doctor
 
 

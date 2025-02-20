@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
 from django.db import models
+from core.models import Address, Contact  # Import from core app
 
 
 class UserManager(BaseUserManager):
@@ -39,13 +40,41 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+from django.db import models
+from datetime import date
+from core.models import Address, Contact
+
+
 class Person(models.Model):
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-    birth_date = models.DateField(null=True, blank=True)
+    """
+    Abstract model for users that represent real people (e.g., Patients, Doctors).
+    """
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    birth_date = models.DateField(default=date(2000, 1, 1))  # ✅ Provide default value
+
+    address1 = models.OneToOneField(
+        Address, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="%(class)s_primary_address1"
+    )
+    address2 = models.OneToOneField(
+        Address, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="%(class)s_secondary_address2"
+    )
+    primary_contact = models.OneToOneField(
+        Contact, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="%(class)s_primary_contact"
+    )
+    secondary_contact = models.OneToOneField(
+        Contact, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name="%(class)s_secondary_contact"
+    )
 
     class Meta:
-        abstract = True  # This ensures 'Person' is not a table in the database
+        abstract = True
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
 
 
 class IdentifierType(models.Model):

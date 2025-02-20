@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, permissions
 
 from patients.permissions import IsPatient
 from .serializers import PatientSerializer
@@ -18,3 +18,14 @@ class PatientRetrieveView(generics.RetrieveAPIView):
         """Ensure the authenticated user is retrieved as a Patient instance."""
         user = self.request.user
         return Patient.objects.select_related().filter(id=user.id).first()
+
+
+class PatientUpdateView(generics.RetrieveUpdateAPIView):
+    """API endpoint for patients to update their Address & Contact details."""
+    queryset = Patient.objects.all()
+    serializer_class = PatientSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Ensure the authenticated user is returned as a `Patient` object."""
+        return Patient.objects.get(pk=self.request.user.pk)
