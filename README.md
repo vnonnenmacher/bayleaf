@@ -27,10 +27,14 @@ cd bayleaf
 ```
 
 ### 2️⃣ **Build the images
+```sh
 docker compose build
+```
 
 ### 2️⃣ **Run the compose
+```sh
 docker compose up
+```
 
 Your API will be live at: **`http://127.0.0.1:8000/`**
 
