@@ -26,23 +26,12 @@ git clone https://github.com/your-username/bayleaf.git
 cd bayleaf
 ```
 
-### 2️⃣ **Create & Activate Virtual Environment**
-```sh
-python -m venv env
-source env/bin/activate  # macOS/Linux
-env\Scripts\activate  # Windows
-```
+### 2️⃣ **Build the images
+docker compose build
 
-### 3️⃣ **Install Dependencies**
-```sh
-pip install -r requirements.txt
-```
+### 2️⃣ **Run the compose
+docker compose up
 
-### 4️⃣ **Apply Migrations & Run Server**
-```sh
-python manage.py migrate
-python manage.py runserver
-```
 Your API will be live at: **`http://127.0.0.1:8000/`**
 
 ---
