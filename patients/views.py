@@ -1,6 +1,8 @@
 from rest_framework import generics
+
+from patients.permissions import IsPatient
 from .serializers import PatientSerializer
-from rest_framework.permissions import IsAuthenticated
+from .models import Patient
 
 
 class PatientCreateView(generics.CreateAPIView):
@@ -10,7 +12,9 @@ class PatientCreateView(generics.CreateAPIView):
 
 class PatientRetrieveView(generics.RetrieveAPIView):
     serializer_class = PatientSerializer
-    permission_classes = [IsAuthenticated]  # Only authenticated users can access
+    permission_classes = [IsPatient]  # Use the app-specific permission
 
     def get_object(self):
-        return self.request.user
+        """Ensure the authenticated user is retrieved as a Patient instance."""
+        user = self.request.user
+        return Patient.objects.select_related().filter(id=user.id).first()
