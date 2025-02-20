@@ -1,7 +1,9 @@
-from rest_framework import generics
+from rest_framework import generics, viewsets, permissions
+from rest_framework import status
 from doctors.permissions import IsDoctor
-from .serializers import DoctorSerializer
-from .models import Doctor
+from .serializers import DoctorSerializer, ShiftSerializer
+from rest_framework.response import Response
+from .models import Doctor, Shift
 
 
 class DoctorCreateView(generics.CreateAPIView):
@@ -17,3 +19,22 @@ class DoctorRetrieveView(generics.RetrieveAPIView):
         """Ensure the authenticated user is retrieved as a Doctor instance."""
         user = self.request.user
         return Doctor.objects.select_related().filter(id=user.id).first()
+
+
+class ShiftViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for doctors to manage their shifts.
+    """
+    serializer_class = ShiftSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDoctor]
+
+    def get_queryset(self):
+        """Return only the shifts of the logged-in doctor."""
+        return Shift.objects.filter(doctor=self.request.user)
+
+    def perform_create(self, serializer):
+        """Assign the shift to the logged-in doctor."""
+        doctor = Doctor.objects.filter(id=self.request.user.id).first()
+        if not doctor:
+            return Response({"error": "User is not a doctor"}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save(doctor=doctor)

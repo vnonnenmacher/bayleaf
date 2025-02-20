@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from .models import Shift
 from .models import Doctor
 
 
@@ -23,3 +24,12 @@ class DoctorSerializer(serializers.ModelSerializer):
             doctor.set_password(password)
             doctor.save()
         return doctor
+
+
+class ShiftSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shift
+        fields = ["id", "doctor", "weekday", "service"]
+        extra_kwargs = {
+            "doctor": {"read_only": True}  # Ensure doctor is always set automatically
+        }
