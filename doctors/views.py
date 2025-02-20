@@ -38,3 +38,14 @@ class ShiftViewSet(viewsets.ModelViewSet):
         if not doctor:
             return Response({"error": "User is not a doctor"}, status=status.HTTP_400_BAD_REQUEST)
         serializer.save(doctor=doctor)
+
+
+class DoctorUpdateView(generics.RetrieveUpdateAPIView):
+    """API endpoint for doctors to update their Address & Contact details."""
+    queryset = Doctor.objects.all()
+    serializer_class = DoctorSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        """Ensure the authenticated user is returned as a `Doctor` object."""
+        return Doctor.objects.get(pk=self.request.user.pk)
