@@ -29,11 +29,15 @@ class Shift(models.Model):
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name="shifts")
     weekday = models.IntegerField(choices=WEEKDAYS)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="shifts")
+    slot_duration = models.PositiveIntegerField(default=30)  # Default slot duration in minutes
+    from_time = models.TimeField()  # ✅ Shift start time
+    to_time = models.TimeField()  # ✅ Shift end time
 
     class Meta:
         verbose_name = "Shift"
         verbose_name_plural = "Shifts"
-        unique_together = ("doctor", "weekday", "service")  # Prevent duplicate shifts
+        unique_together = ("doctor", "weekday", "service", "from_time", "to_time")
 
     def __str__(self):
-        return f"{self.doctor.email} - {self.get_weekday_display()} ({self.service.name})"
+        return (f"{self.doctor.email} - {self.get_weekday_display()} ("
+                f"{self.service.name}) [{self.from_time} - {self.to_time}]")
