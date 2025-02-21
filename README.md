@@ -20,18 +20,20 @@ Bayleaf is an open-source **Django-based API** designed to accelerate HealthTech
 
 ## 🛠 Installation & Setup
 
+You will need docker engine installed on your server: https://docs.docker.com/engine/install/ubuntu/
+
 ### 1️⃣ **Clone the Repository**
 ```sh
 git clone https://github.com/your-username/bayleaf.git
 cd bayleaf
 ```
 
-### 2️⃣ **Build the images
+### 2️⃣ **Build the images**
 ```sh
 docker compose build
 ```
 
-### 2️⃣ **Run the compose
+### 2️⃣ **Run the compose**
 ```sh
 docker compose up
 ```
