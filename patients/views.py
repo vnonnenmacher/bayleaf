@@ -27,5 +27,11 @@ class PatientUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        """Ensure the authenticated user is returned as a `Patient` object."""
-        return Patient.objects.get(pk=self.request.user.pk)
+        """Retrieve the logged-in user's Patient profile correctly."""
+        user = self.request.user  # Get the authenticated user
+
+        # Ensure the user is actually a Patient
+        try:
+            return Patient.objects.get(user_ptr_id=user.id)  # ✅ Correct lookup
+        except Patient.DoesNotExist:
+            raise Patient.DoesNotExist("The logged-in user is not a registered patient.")
