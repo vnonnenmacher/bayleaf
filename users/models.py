@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.conf import settings
 from django.db import models
 from core.models import Address, Contact  # Import from core app
+from datetime import date
 
 
 class UserManager(BaseUserManager):
@@ -40,11 +41,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-from django.db import models
-from datetime import date
-from core.models import Address, Contact
-
-
 class Person(models.Model):
     """
     Abstract model for users that represent real people (e.g., Patients, Doctors).
@@ -54,19 +50,19 @@ class Person(models.Model):
     birth_date = models.DateField(default=date(2000, 1, 1))  # ✅ Provide default value
 
     address1 = models.OneToOneField(
-        Address, on_delete=models.SET_NULL, null=True, blank=True, 
+        Address, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(class)s_primary_address1"
     )
     address2 = models.OneToOneField(
-        Address, on_delete=models.SET_NULL, null=True, blank=True, 
+        Address, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(class)s_secondary_address2"
     )
     primary_contact = models.OneToOneField(
-        Contact, on_delete=models.SET_NULL, null=True, blank=True, 
+        Contact, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(class)s_primary_contact"
     )
     secondary_contact = models.OneToOneField(
-        Contact, on_delete=models.SET_NULL, null=True, blank=True, 
+        Contact, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(class)s_secondary_contact"
     )
 
@@ -78,7 +74,11 @@ class Person(models.Model):
 
 
 class IdentifierType(models.Model):
-    name = models.CharField(max_length=50, unique=True)  # e.g., "Passport", "Driver’s License"
+    """
+    Stores types of identifiers (e.g., Passport, Driver's License).
+    The name itself serves as the primary key.
+    """
+    name = models.CharField(max_length=50, primary_key=True)  # ✅ Make name the primary key
 
     def __str__(self):
         return self.name
@@ -87,7 +87,10 @@ class IdentifierType(models.Model):
 class Identifier(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="identifiers")
     type = models.ForeignKey(IdentifierType, on_delete=models.CASCADE, related_name="identifiers")
-    value = models.CharField(max_length=100, unique=True)  # e.g., passport number
+    value = models.CharField(max_length=100)  # ✅ Removed `unique=True` constraint
+
+    class Meta:
+        unique_together = ("user", "type")  # ✅ Ensures unique identifiers per user, not globally
 
     def __str__(self):
         return f"{self.type.name}: {self.value}"

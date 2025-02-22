@@ -41,11 +41,15 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
 
 class DoctorUpdateView(generics.RetrieveUpdateAPIView):
-    """API endpoint for doctors to update their Address & Contact details."""
+    """API endpoint for doctors to update their profile (including identifiers)."""
+
     queryset = Doctor.objects.all()
     serializer_class = DoctorSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        """Ensure the authenticated user is returned as a `Doctor` object."""
-        return Doctor.objects.get(pk=self.request.user.pk)
+        user = self.request.user
+        try:
+            return Doctor.objects.get(user_ptr_id=user.id)  # ✅ Correct lookup
+        except Doctor.DoesNotExist:
+            raise Doctor.DoesNotExist("The logged-in user is not a registered doctor.")
