@@ -13,14 +13,20 @@ class AvailableSlotsView(APIView):
     """
     permission_classes = [permissions.AllowAny]  # Public access for now
 
-    def post(self, request):
+    def get(self, request):
         """
-        Returns available slots based on service ID and excluding booked slots.
+        Allows fetching available slots using GET request with query parameters.
         """
-        service_ids = request.data.get("services", [])
-        start_date = request.data.get("start_date")
-        end_date = request.data.get("end_date")
+        service_ids = request.query_params.getlist("services", [])
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
 
+        return self.fetch_slots(service_ids, start_date, end_date)
+
+    def fetch_slots(self, service_ids, start_date, end_date):
+        """
+        Shared logic for both GET and POST requests.
+        """
         if not service_ids:
             return Response({"error": "Service IDs are required."}, status=status.HTTP_400_BAD_REQUEST)
 
