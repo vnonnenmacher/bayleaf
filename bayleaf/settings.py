@@ -83,24 +83,24 @@ WSGI_APPLICATION = 'bayleaf.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': os.environ.get('DB_NAME', 'bayleaf_db'),
+#        'USER': os.environ.get('DB_USER', 'dbuser'),
+#        'PASSWORD': os.environ.get('DB_PASSWORD', 'igrp2020'),
+#        'HOST': os.environ.get('DB_HOST', 'db'),
+#        'PORT': os.environ.get('DB_PORT', '5432'),
+#    }
+#}
+
+#Database com sqlite3
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'bayleaf_db'),
-        'USER': os.environ.get('DB_USER', 'dbuser'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'igrp2020'),
-        'HOST': os.environ.get('DB_HOST', 'db'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-# Database com sqlite3
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 
 # Password validation

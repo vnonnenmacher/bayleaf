@@ -30,11 +30,14 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only the shifts of the logged-in doctor."""
-        return Shift.objects.filter(doctor=self.request.user)
+        doctor = Doctor.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
+        if doctor:
+            return Shift.objects.filter(doctor=doctor)
+        return Shift.objects.none()  # If the user is not a doctor, return empty queryset
 
     def perform_create(self, serializer):
         """Assign the shift to the logged-in doctor."""
-        doctor = Doctor.objects.filter(id=self.request.user.id).first()
+        doctor = Doctor.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
         if not doctor:
             return Response({"error": "User is not a doctor"}, status=status.HTTP_400_BAD_REQUEST)
         serializer.save(doctor=doctor)
