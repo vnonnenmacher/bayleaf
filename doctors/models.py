@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from users.models import User, Person
 
@@ -5,7 +6,7 @@ from core.models import Service
 
 
 class Doctor(User, Person):
-    did = models.CharField(max_length=50, primary_key=True)  # Doctor ID as Primary Key
+    did = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
 
     class Meta:
         verbose_name = "Doctor"
