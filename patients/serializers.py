@@ -30,7 +30,8 @@ class PatientSerializer(serializers.ModelSerializer):
             "secondary_contact",
             "identifiers",
         ]
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {"password": {"write_only": True},
+                        "pid": {"read_only": True}}
 
     def create(self, validated_data):
         """Handles nested creation of Identifiers, Address & Contact."""

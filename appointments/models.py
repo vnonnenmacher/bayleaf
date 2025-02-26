@@ -2,29 +2,18 @@ from django.db import models
 from doctors.models import Doctor, Shift
 from patients.models import Patient
 from core.models import Service
+from events.models import ScheduledTimedEvent  # Import the base event model
 
 
-class Appointment(models.Model):
-    STATUS_CHOICES = [
-        ("requested", "Requested"),
-        ("confirmed", "Confirmed"),
-        ("initiated", "Initiated"),
-        ("completed", "Completed"),
-        ("cancelled", "Cancelled"),
-        ("rescheduled", "Rescheduled"),
-    ]
+class Appointment(ScheduledTimedEvent):
+    """
+    Model representing a booked appointment between a doctor and a patient.
+    """
 
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name="appointments")
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="appointments")
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="appointments")
     shift = models.ForeignKey(Shift, on_delete=models.SET_NULL, null=True, blank=True, related_name="appointments")
-
-    booked_at = models.DateTimeField(auto_now_add=True)  # Timestamp of when it was booked
-    scheduled_to = models.DateTimeField()  # Scheduled time of appointment
-    completed_at = models.DateTimeField(null=True, blank=True)  # When appointment was completed
-    duration = models.PositiveIntegerField()  # Duration in minutes
-
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="requested")
 
     class Meta:
         verbose_name = "Appointment"
@@ -33,3 +22,8 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"Appointment with Dr. {self.doctor.email} for {self.patient.email} on {self.scheduled_to}"
+
+    def save(self, *args, **kwargs):
+        """Ensure event_type is always 'appointment'."""
+        self.event_type = "appointment"
+        super().save(*args, **kwargs)

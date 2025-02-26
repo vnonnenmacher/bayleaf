@@ -16,4 +16,4 @@ ignore =
     B010
 extend-ignore = W503
 # https://stackoverflow.com/a/68172142
-max-line-length = 120
+max-line-length = 150
