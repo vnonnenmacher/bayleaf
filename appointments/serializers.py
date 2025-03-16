@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from appointments.models import Appointment
-from doctors.models import Doctor
+from professionals.models import Professional
 from patients.models import Patient
 from core.models import Service
 
@@ -11,7 +11,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     Ensures correct handling of event-based fields and relationships.
     """
 
-    doctor = serializers.PrimaryKeyRelatedField(queryset=Doctor.objects.all())
+    professional = serializers.PrimaryKeyRelatedField(queryset=Professional.objects.all())
     patient = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all())
     service = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all())
 
@@ -19,7 +19,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = [
             "id",
-            "doctor",
+            "professional",
             "patient",
             "service",
             "shift",

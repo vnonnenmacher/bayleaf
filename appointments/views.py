@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from datetime import datetime, timedelta
-from doctors.helpers import generate_slots
-from doctors.serializers import ServiceSlotSerializer
+from professionals.helpers import generate_slots
+from professionals.serializers import ServiceSlotSerializer
 from .models import Appointment
 
 
@@ -40,18 +40,18 @@ class AvailableSlotsView(APIView):
             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
         if start_date > end_date:
-            return Response({"error": "Start date cannot be after end date."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Start date cannot be adoctter end date."}, status=status.HTTP_400_BAD_REQUEST)
 
         available_slots = []
 
-        # Generate slots for each date in the range
+        # Generate slots professionals each date in the range
         current_date = start_date
         while current_date <= end_date:
             all_slots = generate_slots(service_ids, current_date)  # ✅ Already dictionaries
 
             # Get booked appointment slots (excluding cancelled ones)
             booked_slots = set(
-                (appt.doctor.id, appt.scheduled_to.date(), appt.scheduled_to.time())
+                (appt.professional.id, appt.scheduled_to.date(), appt.scheduled_to.time())
                 for appt in Appointment.objects.filter(service_id__in=service_ids)
                 .exclude(status="cancelled")
             )
@@ -59,7 +59,7 @@ class AvailableSlotsView(APIView):
             # Filter out booked slots
             filtered_slots = [
                 slot for slot in all_slots if (
-                    slot["doctor"]["id"], current_date, slot["start_time"]) not in booked_slots
+                    slot["professional"]["id"], current_date, slot["start_time"]) not in booked_slots
             ]
 
             available_slots.extend(filtered_slots)

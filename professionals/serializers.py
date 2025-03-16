@@ -2,14 +2,13 @@ from rest_framework import serializers
 
 from users.models import Identifier, IdentifierType
 from users.serializers import IdentifierSerializer
-from .models import Shift
-from .models import Doctor
+from professionals.models import Shift, Professional
 from core.serializers import AddressSerializer, ContactSerializer
 from core.models import Address, Contact
 
 
-class DoctorSerializer(serializers.ModelSerializer):
-    """Serializer for Doctor with Identifiers, Address & Contact."""
+class ProfessionalSerializer(serializers.ModelSerializer):
+    """Serializer for Professional with Identifiers, Address & Contact."""
 
     address1 = AddressSerializer(required=False)
     address2 = AddressSerializer(required=False)
@@ -18,7 +17,7 @@ class DoctorSerializer(serializers.ModelSerializer):
     identifiers = IdentifierSerializer(many=True, required=False)  # ✅ Handles identifier updates
 
     class Meta:
-        model = Doctor
+        model = Professional
         fields = [
             "did",
             "first_name",
@@ -44,28 +43,28 @@ class DoctorSerializer(serializers.ModelSerializer):
         primary_contact_data = validated_data.pop("primary_contact", None)
         secondary_contact_data = validated_data.pop("secondary_contact", None)
 
-        # ✅ Create doctor without relations
-        doctor = Doctor.objects.create(**validated_data)
-        doctor.set_password(validated_data["password"])
-        doctor.save()
+        # ✅ Create professional without relations
+        professional = Professional.objects.create(**validated_data)
+        professional.set_password(validated_data["password"])
+        professional.save()
 
         # ✅ Handle Address1
         if address1_data:
-            doctor.address1 = Address.objects.create(**address1_data)
+            professional.address1 = Address.objects.create(**address1_data)
 
         # ✅ Handle Address2
         if address2_data:
-            doctor.address2 = Address.objects.create(**address2_data)
+            professional.address2 = Address.objects.create(**address2_data)
 
         # ✅ Handle Primary Contact
         if primary_contact_data:
-            doctor.primary_contact = Contact.objects.create(**primary_contact_data)
+            professional.primary_contact = Contact.objects.create(**primary_contact_data)
 
         # ✅ Handle Secondary Contact
         if secondary_contact_data:
-            doctor.secondary_contact = Contact.objects.create(**secondary_contact_data)
+            professional.secondary_contact = Contact.objects.create(**secondary_contact_data)
 
-        doctor.save()
+        professional.save()
 
         # ✅ Handle Identifiers (Fix: Ensure `IdentifierType` is found or created)
         for identifier_data in identifiers_data:
@@ -76,12 +75,12 @@ class DoctorSerializer(serializers.ModelSerializer):
                 identifier_type, _ = IdentifierType.objects.get_or_create(name=identifier_type_name)
 
                 Identifier.objects.create(
-                    user=doctor,
+                    user=professional,
                     type=identifier_type,  # ✅ Assign valid IdentifierType instance
                     value=identifier_value,
                 )
 
-        return doctor
+        return professional
 
     def update(self, instance, validated_data):
         """Handles nested updates of Identifiers, Address & Contact."""
@@ -91,7 +90,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         primary_contact_data = validated_data.pop("primary_contact", None)
         secondary_contact_data = validated_data.pop("secondary_contact", None)
 
-        # ✅ Update base Doctor fields
+        # ✅ Update base Professional fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
@@ -153,18 +152,18 @@ class DoctorSerializer(serializers.ModelSerializer):
 class ShiftSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shift
-        fields = ["id", "doctor", "weekday", "service", "slot_duration", "from_time", "to_time"]
+        fields = ["id", "professional", "weekday", "service", "slot_duration", "from_time", "to_time"]
         extra_kwargs = {
-            "doctor": {"read_only": True},
+            "professional": {"read_only": True},
             "slot_duration": {"required": True, "min_value": 10, "max_value": 120},
             "from_time": {"required": True},
             "to_time": {"required": True}
         }
 
 
-class ReducedDoctorSerializer(serializers.Serializer):
+class ReducedProfessionalSerializer(serializers.Serializer):
     """
-    A reduced doctor serializer for embedding in slot responses.
+    A reduced professional serializer for embedding in slot responses.
     """
     id = serializers.IntegerField()
     first_name = serializers.CharField()
@@ -176,7 +175,7 @@ class ServiceSlotSerializer(serializers.Serializer):
     """
     Serializer for service slots.
     """
-    doctor = ReducedDoctorSerializer()
+    professional = ReducedProfessionalSerializer()
     service_id = serializers.IntegerField()
     start_time = serializers.TimeField(format="%H:%M")
     end_time = serializers.TimeField(format="%H:%M")
@@ -188,11 +187,11 @@ class ServiceSlotSerializer(serializers.Serializer):
         if isinstance(instance, dict):
             return instance  # Already a dictionary, return as is
         return {
-            "doctor": {
-                "id": instance.doctor_id,
-                "first_name": instance.doctor_name.split(" ")[0],  # Extract first name
-                "last_name": instance.doctor_name.split(" ")[1] if " " in instance.doctor_name else "",
-                "email": instance.doctor_email,
+            "professional": {
+                "id": instance.professional_id,
+                "first_name": instance.professional_name.split(" ")[0],  # Extract first name
+                "last_name": instance.professional_name.split(" ")[1] if " " in instance.professional_name else "",
+                "email": instance.professional_email,
             },
             "service_id": instance.service_id,
             "start_time": instance.start_time.strftime("%H:%M"),

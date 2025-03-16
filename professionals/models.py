@@ -5,12 +5,18 @@ from users.models import User, Person
 from core.models import Service
 
 
-class Doctor(User, Person):
+class Role(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+
+class Professional(User, Person):
     did = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
 
     class Meta:
-        verbose_name = "Doctor"
-        verbose_name_plural = "Doctors"
+        verbose_name = "Professional"
+        verbose_name_plural = "Professionals"
 
     def __str__(self):
         return f"Doctor {self.did}: {self.email}"
@@ -27,7 +33,7 @@ class Shift(models.Model):
         (6, "Sunday"),
     ]
 
-    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name="shifts")
+    doctor = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="shifts")
     weekday = models.IntegerField(choices=WEEKDAYS)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="shifts")
     slot_duration = models.PositiveIntegerField(default=30)  # Default slot duration in minutes
