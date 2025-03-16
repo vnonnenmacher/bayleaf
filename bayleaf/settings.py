@@ -1,5 +1,3 @@
-import os
-
 """
 Django settings for bayleaf project.
 
@@ -47,7 +45,8 @@ INSTALLED_APPS = [
     'doctors',
     'core',
     'appointments',
-    'events'
+    'events',
+    'lab'
 ]
 
 MIDDLEWARE = [
@@ -84,7 +83,7 @@ WSGI_APPLICATION = 'bayleaf.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-#DATABASES = {
+# DATABASES = {
 #    'default': {
 #        'ENGINE': 'django.db.backends.postgresql',
 #        'NAME': os.environ.get('DB_NAME', 'bayleaf_db'),
@@ -93,9 +92,9 @@ WSGI_APPLICATION = 'bayleaf.wsgi.application'
 #        'HOST': os.environ.get('DB_HOST', 'db'),
 #        'PORT': os.environ.get('DB_PORT', '5432'),
 #    }
-#}
+# }
 
-#Database com sqlite3
+# Database com sqlite3
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -160,3 +159,22 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),  # Authorization: Bearer <token>
 }
+
+BLOCKCHAIN_CONTRACT_ABI = [
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "_sampleId", "type": "string"},
+            {"name": "_previousState", "type": "string"},
+            {"name": "_newState", "type": "string"}
+        ],
+        "name": "addTransition",
+        "outputs": [],
+        "payable": False,
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+
+BLOCKCHAIN_CONTRACT_ADDRESS = "0x36610135c9aD0650CaAdb3A99151bdDC4E50e4c8"
+WEB3_PROVIDER = "http://127.0.0.1:8545"
