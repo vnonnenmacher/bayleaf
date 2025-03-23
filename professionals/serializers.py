@@ -2,9 +2,20 @@ from rest_framework import serializers
 
 from users.models import Identifier, IdentifierType
 from users.serializers import IdentifierSerializer
-from professionals.models import Shift, Professional
+from professionals.models import Role, Shift, Professional
 from core.serializers import AddressSerializer, ContactSerializer
 from core.models import Address, Contact
+
+
+class RoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Role
+        fields = ["id", "name", "description"]
+        extra_kwargs = {
+            "name": {"required": True},
+            "description": {"required": False}
+        }
 
 
 class ProfessionalSerializer(serializers.ModelSerializer):
@@ -15,6 +26,8 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     primary_contact = ContactSerializer(required=False)
     secondary_contact = ContactSerializer(required=False)
     identifiers = IdentifierSerializer(many=True, required=False)  # ✅ Handles identifier updates
+    role = RoleSerializer(required=False)
+    role_id = serializers.IntegerField(required=False, write_only=True)
 
     class Meta:
         model = Professional
@@ -30,10 +43,11 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             "primary_contact",
             "secondary_contact",
             "identifiers",
+            "role",
+            "role_id"
         ]
         extra_kwargs = {"password": {"write_only": True},
-                        "did": {"read_only": True},  # ✅ Prevents modification
-                        }
+                        "did": {"read_only": True}}
 
     def create(self, validated_data):
         """Handles nested creation of Identifiers, Address & Contact."""
@@ -42,6 +56,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         address2_data = validated_data.pop("address2", None)
         primary_contact_data = validated_data.pop("primary_contact", None)
         secondary_contact_data = validated_data.pop("secondary_contact", None)
+        role_id = validated_data.pop("role_id", None)
 
         # ✅ Create professional without relations
         professional = Professional.objects.create(**validated_data)
@@ -80,6 +95,9 @@ class ProfessionalSerializer(serializers.ModelSerializer):
                     value=identifier_value,
                 )
 
+        if role_id:
+            professional.role = Role.objects.get(id=role_id)
+
         return professional
 
     def update(self, instance, validated_data):
@@ -89,6 +107,9 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         address2_data = validated_data.pop("address2", None)
         primary_contact_data = validated_data.pop("primary_contact", None)
         secondary_contact_data = validated_data.pop("secondary_contact", None)
+        role_id = validated_data.pop("role_id", None)
+
+        print("role_id", role_id)
 
         # ✅ Update base Professional fields
         for attr, value in validated_data.items():
@@ -130,8 +151,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             else:
                 instance.secondary_contact = Contact.objects.create(**secondary_contact_data)
 
-        instance.save()
-
         # ✅ Update or Create Identifiers
         for identifier_data in identifiers_data:
             identifier_type_name = identifier_data.get("type")
@@ -145,6 +164,11 @@ class ProfessionalSerializer(serializers.ModelSerializer):
                     type=identifier_type,
                     defaults={"value": identifier_value},
                 )
+
+        if role_id:
+            instance.role = Role.objects.get(id=role_id)
+
+        instance.save()
 
         return instance
 

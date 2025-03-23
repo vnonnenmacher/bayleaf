@@ -9,6 +9,9 @@ class Role(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
 
+    def __str__(self):
+        return self.name
+
 
 class Professional(User, Person):
     did = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
@@ -19,7 +22,7 @@ class Professional(User, Person):
         verbose_name_plural = "Professionals"
 
     def __str__(self):
-        return f"Doctor {self.did}: {self.email}"
+        return f"Professional {self.did}: {self.email}. Role {self.role}"
 
 
 class Shift(models.Model):
@@ -33,7 +36,7 @@ class Shift(models.Model):
         (6, "Sunday"),
     ]
 
-    doctor = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="shifts")
+    professional = models.ForeignKey(Professional, on_delete=models.CASCADE, related_name="shifts")
     weekday = models.IntegerField(choices=WEEKDAYS)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="shifts")
     slot_duration = models.PositiveIntegerField(default=30)  # Default slot duration in minutes
@@ -43,8 +46,8 @@ class Shift(models.Model):
     class Meta:
         verbose_name = "Shift"
         verbose_name_plural = "Shifts"
-        unique_together = ("doctor", "weekday", "service", "from_time", "to_time")
+        unique_together = ("professional", "weekday", "service", "from_time", "to_time")
 
     def __str__(self):
-        return (f"{self.doctor.email} - {self.get_weekday_display()} ("
+        return (f"{self.professional.email} - {self.get_weekday_display()} ("
                 f"{self.service.name}) [{self.from_time} - {self.to_time}]")

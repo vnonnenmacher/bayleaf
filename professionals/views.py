@@ -1,8 +1,8 @@
 from rest_framework import generics, viewsets, permissions
 from rest_framework import status
-from .serializers import ProfessionalSerializer, ShiftSerializer
+from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer
 from rest_framework.response import Response
-from .models import Professional, Shift
+from .models import Professional, Role, Shift
 
 
 class ProfessionalCreateView(generics.CreateAPIView):
@@ -29,17 +29,26 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Return only the shifts of the logged-in doctor."""
-        doctor = Professional.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
-        if doctor:
-            return Shift.objects.filter(doctor=doctor)
+        professional = Professional.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
+        if professional:
+            return Shift.objects.filter(professional=professional)
         return Shift.objects.none()  # If the user is not a doctor, return empty queryset
 
     def perform_create(self, serializer):
         """Assign the shift to the logged-in doctor."""
-        doctor = Professional.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
-        if not doctor:
+        professional = Professional.objects.filter(user_ptr_id=self.request.user.id).first()  # ✅ Fix
+        if not professional:
             return Response({"error": "User is not a doctor"}, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save(doctor=doctor)
+        serializer.save(professional=professional)
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing professional roles.
+    """
+    serializer_class = RoleSerializer
+    queryset = Role.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class ProfessionalUpdateView(generics.RetrieveUpdateAPIView):
