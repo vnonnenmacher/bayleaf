@@ -17,7 +17,7 @@ def generate_slots(service_ids, date):
 
     # Get all shifts that match the given service IDs and weekday
     weekday = date.weekday()  # Convert the date into a weekday index
-    shifts = Shift.objects.filter(service_id__in=service_ids, weekday=weekday).select_related("doctor", "service")
+    shifts = Shift.objects.filter(service_id__in=service_ids, weekday=weekday).select_related("professional", "service")
 
     for shift in shifts:
         # Convert shift times into datetime objects for calculation
@@ -29,10 +29,10 @@ def generate_slots(service_ids, date):
         while current_time + slot_duration <= end_time:
             slot_instance = {
                 "doctor": {
-                    "id": shift.doctor.id,
-                    "first_name": shift.doctor.first_name,
-                    "last_name": shift.doctor.last_name,
-                    "email": shift.doctor.email
+                    "id": shift.professional.id,
+                    "first_name": shift.professional.first_name,
+                    "last_name": shift.professional.last_name,
+                    "email": shift.professional.email
                 },
                 "service_id": shift.service.id,
                 "start_time": current_time.time(),
