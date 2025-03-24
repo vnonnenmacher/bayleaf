@@ -1,8 +1,9 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, viewsets, permissions, filters
 from rest_framework import status
-from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer
+from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer, SpecializationSerializer
 from rest_framework.response import Response
-from .models import Professional, Role, Shift
+from .models import Professional, Role, Shift, Specialization
 
 
 class ProfessionalCreateView(generics.CreateAPIView):
@@ -67,13 +68,31 @@ class ProfessionalUpdateView(generics.RetrieveUpdateAPIView):
 
 
 class ProfessionalViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet to list and retrieve medical professionals.
-    Supports future filtering, pagination, and detail endpoints.
-    """
     serializer_class = ProfessionalSerializer
     queryset = Professional.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["first_name", "last_name", "email"]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['role']  # ✅ role can be handled automatically
+    search_fields = ['first_name', 'last_name', 'email']
+
+    ordering = ['last_name', 'first_name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().order_by('last_name', 'first_name')  # ✅ Safe ordering
+
+        service_ids = self.request.query_params.getlist("service_ids")
+        if service_ids:
+            queryset = queryset.filter(services__id__in=service_ids)
+
+        specialization_ids = self.request.query_params.getlist("specialization_ids")
+        if specialization_ids:
+            queryset = queryset.filter(specializations__id__in=specialization_ids)
+
+        return queryset.distinct()
+
+
+class SpecializationViewSet(viewsets.ModelViewSet):
+    queryset = Specialization.objects.all()
+    serializer_class = SpecializationSerializer
+    permission_classes = [permissions.IsAuthenticated]

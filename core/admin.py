@@ -18,3 +18,13 @@ class AddressAdmin(admin.ModelAdmin):
 class ContactAdmin(admin.ModelAdmin):
     list_display = ("phone_number", "email")
     search_fields = ("phone_number", "email")
+
+
+class AddressInline(admin.StackedInline):
+    model = Address
+    extra = 0
+
+
+class ContactInline(admin.StackedInline):
+    model = Contact
+    extra = 0

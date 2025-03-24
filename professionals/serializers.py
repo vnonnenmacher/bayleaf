@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from users.models import Identifier, IdentifierType
 from users.serializers import IdentifierSerializer
-from professionals.models import Role, Shift, Professional
+from professionals.models import Role, Shift, Professional, Specialization
 from core.serializers import AddressSerializer, ContactSerializer
 from core.models import Address, Contact
 
@@ -221,3 +221,9 @@ class ServiceSlotSerializer(serializers.Serializer):
             "start_time": instance.start_time.strftime("%H:%M"),
             "end_time": instance.end_time.strftime("%H:%M"),
         }
+
+
+class SpecializationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Specialization
+        fields = ['id', 'name', 'description']

@@ -5,6 +5,14 @@ from users.models import User, Person
 from core.models import Service
 
 
+class Specialization(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Role(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -16,6 +24,9 @@ class Role(models.Model):
 class Professional(User, Person):
     did = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
+
+    services = models.ManyToManyField(Service, related_name="professionals", blank=True)
+    specializations = models.ManyToManyField(Specialization, related_name="professionals", blank=True)
 
     class Meta:
         verbose_name = "Professional"
