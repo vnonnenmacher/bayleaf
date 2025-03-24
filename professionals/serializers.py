@@ -44,7 +44,8 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             "secondary_contact",
             "identifiers",
             "role",
-            "role_id"
+            "role_id",
+            "bio",
         ]
         extra_kwargs = {"password": {"write_only": True},
                         "did": {"read_only": True}}

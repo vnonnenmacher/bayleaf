@@ -27,6 +27,7 @@ class Professional(User, Person):
 
     services = models.ManyToManyField(Service, related_name="professionals", blank=True)
     specializations = models.ManyToManyField(Specialization, related_name="professionals", blank=True)
+    bio = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Professional"
