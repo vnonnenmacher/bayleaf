@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, filters
 
 from patients.permissions import IsPatient
 from .serializers import PatientSerializer
@@ -35,3 +35,12 @@ class PatientUpdateView(generics.RetrieveUpdateAPIView):
             return Patient.objects.get(user_ptr_id=user.id)  # ✅ Correct lookup
         except Patient.DoesNotExist:
             raise Patient.DoesNotExist("The logged-in user is not a registered patient.")
+
+
+class PatientListView(generics.ListAPIView):
+    queryset = Patient.objects.all()
+    serializer_class = PatientSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Customize this as needed
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['first_name', 'last_name', 'email']

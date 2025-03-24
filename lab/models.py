@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 import uuid
 
+from patients.models import Patient
+
 
 class SampleState(models.Model):
     """
@@ -11,8 +13,19 @@ class SampleState(models.Model):
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    is_initial_state = models.BooleanField(default=False)  # True if this is the initial state
+    is_final_state = models.BooleanField(default=False)  # True if this is the final state
+
     def __str__(self):
         return self.name
+
+
+class AllowedStateTransition(models.Model):
+    """
+    Represents a valid state transition for a sample.
+    """
+    from_state = models.ForeignKey(SampleState, on_delete=models.CASCADE, related_name="allowed_transitions")
+    to_state = models.ForeignKey(SampleState, on_delete=models.CASCADE, related_name="incoming_transitions")
 
 
 class SampleType(models.Model):
@@ -32,7 +45,7 @@ class Sample(models.Model):
     Represents a biological sample collected from a patient.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    patient = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="samples")
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="samples")
     sample_type = models.ForeignKey(SampleType, on_delete=models.CASCADE, related_name="samples")
 
     def __str__(self):

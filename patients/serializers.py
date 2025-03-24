@@ -143,3 +143,9 @@ class PatientSerializer(serializers.ModelSerializer):
                 )
 
         return instance
+
+
+class ReducedPatientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Patient
+        fields = ['pid', 'first_name', 'last_name', 'birth_date']

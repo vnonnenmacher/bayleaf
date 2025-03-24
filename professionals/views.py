@@ -1,4 +1,4 @@
-from rest_framework import generics, viewsets, permissions
+from rest_framework import generics, viewsets, permissions, filters
 from rest_framework import status
 from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer
 from rest_framework.response import Response
@@ -64,3 +64,16 @@ class ProfessionalUpdateView(generics.RetrieveUpdateAPIView):
             return Professional.objects.get(user_ptr_id=user.id)  # ✅ Correct lookup
         except Professional.DoesNotExist:
             raise Professional.DoesNotExist("The logged-in user is not a registered doctor.")
+
+
+class ProfessionalViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet to list and retrieve medical professionals.
+    Supports future filtering, pagination, and detail endpoints.
+    """
+    serializer_class = ProfessionalSerializer
+    queryset = Professional.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["first_name", "last_name", "email"]
