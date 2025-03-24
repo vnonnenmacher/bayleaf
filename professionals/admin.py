@@ -1,5 +1,5 @@
 from django.contrib import admin
-from professionals.models import Professional, Role, Specialization
+from professionals.models import Professional, Role, Shift, Specialization
 from users.admin import IdentifierInline  # if in a separate file
 
 
@@ -25,7 +25,7 @@ class ProfessionalAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Basic Info", {
-            'fields': ('first_name', 'last_name', 'email', 'birth_date', 'role', 'password')
+            'fields': ('first_name', 'last_name', 'email', 'birth_date', 'role', 'password', 'bio')
         }),
         ("Address", {
             'fields': ('address1', 'address2'),
@@ -39,3 +39,12 @@ class ProfessionalAdmin(admin.ModelAdmin):
             'fields': ('services', 'specializations'),
         }),
     )
+
+
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ["professional", "service", "weekday", "from_time", "to_time", "slot_duration"]
+    list_filter = ["weekday", "service", "professional"]
+    search_fields = ["professional__first_name", "professional__last_name", "professional__email"]
+    autocomplete_fields = ["professional", "service"]
+    ordering = ["professional", "weekday", "from_time"]
