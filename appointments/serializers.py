@@ -93,3 +93,21 @@ class AppointmentBookingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["event_type"] = "appointment"
         return Appointment.objects.create(**validated_data)
+
+
+class AppointmentListSerializer(serializers.ModelSerializer):
+    professional = serializers.PrimaryKeyRelatedField(read_only=True)
+    patient = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            "id",
+            "scheduled_to",
+            "duration_minutes",
+            "status",
+            "professional",
+            "patient",
+            "service",
+            "shift",
+        ]

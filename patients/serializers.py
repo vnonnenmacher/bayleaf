@@ -1,4 +1,6 @@
-from rest_framework import serializers
+from rest_framework import serializers, generics, permissions
+from appointments.models import Appointment
+from appointments.serializers import AppointmentListSerializer
 from patients.models import Patient
 from users.models import Identifier, IdentifierType
 from core.serializers import AddressSerializer, ContactSerializer
@@ -149,3 +151,16 @@ class ReducedPatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
         fields = ['pid', 'first_name', 'last_name', 'birth_date']
+
+
+class PatientAppointmentListView(generics.ListAPIView):
+    serializer_class = AppointmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            patient = Patient.objects.get(user_ptr_id=self.request.user.id)
+        except Patient.DoesNotExist:
+            return Appointment.objects.none()
+
+        return Appointment.objects.filter(patient=patient).order_by("-scheduled_to")
