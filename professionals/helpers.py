@@ -28,7 +28,7 @@ def generate_slots(service_ids, date):
         # Generate slots within the shift's time range
         while current_time + slot_duration <= end_time:
             slot_instance = {
-                "doctor": {
+                "professional": {
                     "id": shift.professional.id,
                     "first_name": shift.professional.first_name,
                     "last_name": shift.professional.last_name,
@@ -36,7 +36,8 @@ def generate_slots(service_ids, date):
                 },
                 "service_id": shift.service.id,
                 "start_time": current_time.time(),
-                "end_time": (current_time + slot_duration).time()
+                "end_time": (current_time + slot_duration).time(),
+                "shift_id": shift.id
             }
             slots.append(slot_instance)
             current_time += slot_duration  # Move to the next slot
