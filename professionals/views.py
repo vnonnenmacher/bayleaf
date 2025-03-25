@@ -1,6 +1,9 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, viewsets, permissions, filters
 from rest_framework import status
+
+from appointments.models import Appointment
+from appointments.serializers import AppointmentListSerializer
 from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer, SpecializationSerializer
 from rest_framework.response import Response
 from .models import Professional, Role, Shift, Specialization
@@ -96,3 +99,19 @@ class SpecializationViewSet(viewsets.ModelViewSet):
     queryset = Specialization.objects.all()
     serializer_class = SpecializationSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class ProfessionalAppointmentListView(generics.ListAPIView):
+    serializer_class = AppointmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from appointments.filters import apply_appointment_filters  # or define it above
+
+        try:
+            professional = Professional.objects.get(user_ptr_id=self.request.user.id)
+        except Professional.DoesNotExist:
+            return Appointment.objects.none()
+
+        qs = Appointment.objects.filter(professional=professional)
+        return apply_appointment_filters(qs, self.request).order_by("-scheduled_to")
