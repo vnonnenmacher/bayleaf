@@ -62,12 +62,9 @@ class AppointmentBookingSerializer(serializers.ModelSerializer):
         shift = data["shift"]
         scheduled_to = data["appointment_time"]
 
-        # ✅ Make sure the appointment is in the future
         if scheduled_to <= now():
             raise serializers.ValidationError("Appointment time must be in the future.")
 
-        # ✅ Check that appointment_time fits within shift's time range
-        # shift_date = scheduled_to.date()
         shift_start = shift.from_time
         shift_end = shift.to_time
 
@@ -79,7 +76,6 @@ class AppointmentBookingSerializer(serializers.ModelSerializer):
         data["duration_minutes"] = shift.slot_duration
         data["scheduled_to"] = scheduled_to
 
-        # Inject patient and creator from context
         request = self.context.get("request")
         if request and request.user:
             data["created_by"] = request.user
@@ -87,6 +83,9 @@ class AppointmentBookingSerializer(serializers.ModelSerializer):
                 data["patient"] = Patient.objects.get(user_ptr_id=request.user.id)
             except Patient.DoesNotExist:
                 raise serializers.ValidationError("Authenticated user is not a patient.")
+
+        # 🧼 Remove input-only field
+        data.pop("appointment_time", None)
 
         return data
 

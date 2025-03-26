@@ -10,7 +10,7 @@ from .views import (ProfessionalAppointmentListView, ProfessionalCreateView,
                     SpecializationViewSet)
 
 router = DefaultRouter()
-router.register("", ProfessionalViewSet, basename="professionals")
+router.register("list", ProfessionalViewSet, basename="professionals")
 router.register("shifts", ShiftViewSet, basename="shifts")
 router.register("roles", RoleViewSet, basename="roles")
 router.register("specializations", SpecializationViewSet, basename="specializations")

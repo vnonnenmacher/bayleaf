@@ -1,13 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions, generics
+from rest_framework import status, permissions, generics, viewsets
 from rest_framework.pagination import PageNumberPagination
 from datetime import datetime, timedelta
 from appointments.models import Appointment
-from appointments.serializers import AppointmentBookingSerializer
+from appointments.serializers import AppointmentBookingSerializer, AppointmentListSerializer
 from professionals.helpers import generate_slots
+from professionals.models import Professional
 from professionals.serializers import ServiceSlotSerializer
 from django.utils.timezone import now
+from rest_framework.decorators import action
 
 
 class AvailableSlotsPagination(PageNumberPagination):
@@ -95,3 +97,50 @@ class AppointmentBookingView(generics.CreateAPIView):
     serializer_class = AppointmentBookingSerializer
     queryset = Appointment.objects.all()
     permission_classes = [permissions.IsAuthenticated]
+
+
+class AppointmentActionViewSet(viewsets.GenericViewSet):
+    queryset = Appointment.objects.all()
+    serializer_class = AppointmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_appointment_for_user(self, appointment_id):
+        """
+        Retrieves an appointment if the authenticated user is the assigned professional.
+        """
+        try:
+            professional = Professional.objects.get(user_ptr_id=self.request.user.id)
+        except Professional.DoesNotExist:
+            return None
+
+        try:
+            return Appointment.objects.get(id=appointment_id, professional=professional)
+        except Appointment.DoesNotExist:
+            return None
+
+    def perform_status_transition(self, request, pk, new_status):
+        appointment = self.get_appointment_for_user(pk)
+        if not appointment:
+            return Response(
+                {"error": "Appointment not found or permission denied."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            appointment.update_status(new_status, changed_by=request.user)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(AppointmentListSerializer(appointment).data)
+
+    @action(detail=True, methods=["post"])
+    def confirm(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "CONFIRMED")
+
+    @action(detail=True, methods=["post"])
+    def initiate(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "INITIATED")
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "COMPLETED")
