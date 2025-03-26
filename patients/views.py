@@ -5,6 +5,7 @@ from appointments.serializers import AppointmentListSerializer
 from patients.permissions import IsPatient
 from .serializers import PatientSerializer
 from .models import Patient
+from django.utils.timezone import now
 
 
 class PatientCreateView(generics.CreateAPIView):
@@ -62,3 +63,24 @@ class PatientAppointmentListView(generics.ListAPIView):
 
         qs = Appointment.objects.filter(patient=patient)
         return apply_appointment_filters(qs, self.request).order_by("-scheduled_to")
+
+
+class NextAppointmentsView(generics.ListAPIView):
+    serializer_class = AppointmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            patient = Patient.objects.get(user_ptr_id=self.request.user.id)
+        except Patient.DoesNotExist:
+            return Appointment.objects.none()
+
+        return (
+            Appointment.objects
+            .filter(
+                patient=patient,
+                scheduled_to__gte=now(),
+            )
+            .exclude(status__in=["CANCELED", "COMPLETED"])
+            .order_by("scheduled_to")
+        )

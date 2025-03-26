@@ -7,6 +7,7 @@ from appointments.serializers import AppointmentListSerializer
 from .serializers import ProfessionalSerializer, RoleSerializer, ShiftSerializer, SpecializationSerializer
 from rest_framework.response import Response
 from .models import Professional, Role, Shift, Specialization
+from django.utils.timezone import now
 
 
 class ProfessionalCreateView(generics.CreateAPIView):
@@ -115,3 +116,24 @@ class ProfessionalAppointmentListView(generics.ListAPIView):
 
         qs = Appointment.objects.filter(professional=professional)
         return apply_appointment_filters(qs, self.request).order_by("-scheduled_to")
+
+
+class NextProfessionalAppointmentsView(generics.ListAPIView):
+    serializer_class = AppointmentListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            professional = Professional.objects.get(user_ptr_id=self.request.user.id)
+        except Professional.DoesNotExist:
+            return Appointment.objects.none()
+
+        return (
+            Appointment.objects
+            .filter(
+                professional=professional,
+                scheduled_to__gte=now(),
+            )
+            .exclude(status__in=["CANCELED", "COMPLETED"])
+            .order_by("scheduled_to")
+        )

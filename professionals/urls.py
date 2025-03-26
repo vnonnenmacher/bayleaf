@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .views import (ProfessionalAppointmentListView, ProfessionalCreateView,
+from .views import (NextProfessionalAppointmentsView, ProfessionalAppointmentListView, ProfessionalCreateView,
                     ProfessionalRetrieveView,
                     ProfessionalUpdateView,
                     ProfessionalViewSet,
@@ -20,5 +20,6 @@ urlpatterns = [
     path("retrieve/", ProfessionalRetrieveView.as_view(), name="professional-retrieve"),
     path("profile/", ProfessionalUpdateView.as_view(), name="update_professional"),
     path("appointments/", ProfessionalAppointmentListView.as_view(), name="professional-appointments"),
+    path("appointments/next/", NextProfessionalAppointmentsView.as_view(), name="professional-next-appointments"),
     path("", include(router.urls)),
 ]
