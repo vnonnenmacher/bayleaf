@@ -1,13 +1,18 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions, generics
+from rest_framework import status, permissions, generics, viewsets
 from rest_framework.pagination import PageNumberPagination
 from datetime import datetime, timedelta
 from appointments.models import Appointment
-from appointments.serializers import AppointmentBookingSerializer
+from appointments.serializers import AppointmentBookingSerializer, AppointmentListSerializer
+from patients.models import Patient
 from professionals.helpers import generate_slots
+from professionals.models import Professional
 from professionals.serializers import ServiceSlotSerializer
 from django.utils.timezone import now
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
 
 class AvailableSlotsPagination(PageNumberPagination):
@@ -95,3 +100,57 @@ class AppointmentBookingView(generics.CreateAPIView):
     serializer_class = AppointmentBookingSerializer
     queryset = Appointment.objects.all()
     permission_classes = [permissions.IsAuthenticated]
+
+
+class AppointmentActionViewSet(viewsets.GenericViewSet):
+    queryset = Appointment.objects.all()
+    serializer_class = AppointmentListSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.get_queryset().filter(id=self.kwargs["pk"]).first()
+
+    def is_doctor(self, user, appointment):
+        return Professional.objects.filter(user_ptr_id=user.id, id=appointment.professional_id).exists()
+
+    def is_patient(self, user, appointment):
+        return Patient.objects.filter(user_ptr_id=user.id, pid=appointment.patient_id).exists()
+
+    def perform_status_transition(self, request, pk, new_status, allowed_roles):
+        appointment = self.get_object()
+        if not appointment:
+            return Response({"error": "Appointment not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # ⛔ permission check
+        user = request.user
+        role_check = {
+            "doctor": self.is_doctor(user, appointment),
+            "patient": self.is_patient(user, appointment),
+        }
+
+        if not any(role_check[role] for role in allowed_roles):
+            raise PermissionDenied("You are not allowed to perform this action.")
+
+        # ✅ transition
+        try:
+            appointment.update_status(new_status, changed_by=request.user)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(AppointmentListSerializer(appointment).data)
+
+    @action(detail=True, methods=["post"])
+    def confirm(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "CONFIRMED", allowed_roles=["doctor"])
+
+    @action(detail=True, methods=["post"])
+    def initiate(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "INITIATED", allowed_roles=["doctor"])
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "COMPLETED", allowed_roles=["doctor"])
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        return self.perform_status_transition(request, pk, "CANCELED", allowed_roles=["doctor", "patient"])

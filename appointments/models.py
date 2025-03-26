@@ -18,7 +18,6 @@ class Appointment(ScheduledTimedEvent):
     class Meta:
         verbose_name = "Appointment"
         verbose_name_plural = "Appointments"
-        unique_together = ("professional", "patient", "scheduled_to")  # Prevent duplicate bookings
 
     def __str__(self):
         return f"Appointment with Dr. {self.doctor.email} for {self.patient.email} on {self.scheduled_to}"
