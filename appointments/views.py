@@ -13,6 +13,8 @@ from django.utils.timezone import now
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class AvailableSlotsPagination(PageNumberPagination):
@@ -24,6 +26,37 @@ class AvailableSlotsPagination(PageNumberPagination):
 class AvailableSlotsView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve available appointment slots based on service and date range.",
+        manual_parameters=[
+            openapi.Parameter(
+                name="services",
+                in_=openapi.IN_QUERY,
+                description="List of service IDs. Can be repeated (e.g., ?services=1&services=2)",
+                required=True,
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_INTEGER),
+                collection_format="multi"
+            ),
+            openapi.Parameter(
+                name="start_date",
+                in_=openapi.IN_QUERY,
+                description="Start date in YYYY-MM-DD format",
+                required=True,
+                type=openapi.TYPE_STRING,
+                format="date"
+            ),
+            openapi.Parameter(
+                name="end_date",
+                in_=openapi.IN_QUERY,
+                description="End date in YYYY-MM-DD format",
+                required=True,
+                type=openapi.TYPE_STRING,
+                format="date"
+            ),
+        ],
+        responses={200: ServiceSlotSerializer(many=True)}
+    )
     def get(self, request):
         service_ids = request.query_params.getlist("services", [])
         start_date = request.query_params.get("start_date")
@@ -101,6 +134,14 @@ class AppointmentBookingView(generics.CreateAPIView):
     queryset = Appointment.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Book an appointment using a shift ID and appointment time.",
+        request_body=AppointmentBookingSerializer,
+        responses={201: AppointmentListSerializer}
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
 
 class AppointmentActionViewSet(viewsets.GenericViewSet):
     queryset = Appointment.objects.all()
@@ -139,18 +180,34 @@ class AppointmentActionViewSet(viewsets.GenericViewSet):
 
         return Response(AppointmentListSerializer(appointment).data)
 
+    @swagger_auto_schema(
+        operation_description="Confirm an appointment (doctor only).",
+        responses={200: AppointmentListSerializer}
+    )
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
         return self.perform_status_transition(request, pk, "CONFIRMED", allowed_roles=["doctor"])
 
+    @swagger_auto_schema(
+        operation_description="Initiate an appointment (doctor only).",
+        responses={200: AppointmentListSerializer}
+    )
     @action(detail=True, methods=["post"])
     def initiate(self, request, pk=None):
         return self.perform_status_transition(request, pk, "INITIATED", allowed_roles=["doctor"])
 
+    @swagger_auto_schema(
+        operation_description="Mark the appointment as completed (doctor only).",
+        responses={200: AppointmentListSerializer}
+    )
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         return self.perform_status_transition(request, pk, "COMPLETED", allowed_roles=["doctor"])
 
+    @swagger_auto_schema(
+        operation_description="Cancel the appointment (doctor or patient).",
+        responses={200: AppointmentListSerializer}
+    )
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         return self.perform_status_transition(request, pk, "CANCELED", allowed_roles=["doctor", "patient"])
