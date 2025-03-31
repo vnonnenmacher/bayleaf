@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'appointments',
     'events',
     'lab',
-    'professionals'
+    'professionals',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -73,7 +74,11 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'libraries': {
+                'staticfiles': 'django.templatetags.static',
+            }
         },
+    
     },
 ]
 
@@ -156,6 +161,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
 }
 
 SIMPLE_JWT = {
