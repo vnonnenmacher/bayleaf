@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'lab',
     'professionals',
     'drf_yasg',
+    'prescriptions',
 ]
 
 MIDDLEWARE = [
