@@ -16,6 +16,7 @@ class PatientSerializer(serializers.ModelSerializer):
     primary_contact = ContactSerializer(required=False)
     secondary_contact = ContactSerializer(required=False)
     identifiers = IdentifierSerializer(many=True, required=False)
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Patient
@@ -31,6 +32,7 @@ class PatientSerializer(serializers.ModelSerializer):
             "primary_contact",
             "secondary_contact",
             "identifiers",
+            "avatar"
         ]
         extra_kwargs = {"password": {"write_only": True},
                         "pid": {"read_only": True}}

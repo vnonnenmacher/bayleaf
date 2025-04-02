@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -190,3 +191,6 @@ BLOCKCHAIN_CONTRACT_ABI = [
 
 BLOCKCHAIN_CONTRACT_ADDRESS = "0x36610135c9aD0650CaAdb3A99151bdDC4E50e4c8"
 WEB3_PROVIDER = "http://127.0.0.1:8545"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")

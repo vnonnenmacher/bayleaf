@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import models
 from core.models import Address, Contact  # Import from core app
 from datetime import date
+from django.core.validators import FileExtensionValidator
 
 
 class UserManager(BaseUserManager):
@@ -64,6 +65,14 @@ class Person(models.Model):
     secondary_contact = models.OneToOneField(
         Contact, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="%(class)s_secondary_contact"
+    )
+
+    avatar = models.ImageField(
+        upload_to="avatars/",
+        null=True,
+        blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
+        help_text="Optional profile image"
     )
 
     class Meta:

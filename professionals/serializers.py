@@ -28,6 +28,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     identifiers = IdentifierSerializer(many=True, required=False)  # ✅ Handles identifier updates
     role = RoleSerializer(required=False)
     role_id = serializers.IntegerField(required=False, write_only=True)
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Professional
@@ -46,6 +47,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             "role",
             "role_id",
             "bio",
+            "avatar"
         ]
         extra_kwargs = {"password": {"write_only": True},
                         "did": {"read_only": True}}
