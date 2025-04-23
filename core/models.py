@@ -37,3 +37,14 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.phone_number} ({self.email})" if self.email else self.phone_number
+
+
+class DosageUnit(models.Model):
+    """
+    Represents a measurable unit for medication dosage (e.g., mg, mL, tablet).
+    """
+    code = models.CharField(max_length=20, unique=True)  # e.g. "mg"
+    name = models.CharField(max_length=100)              # e.g. "Milligram"
+
+    def __str__(self):
+        return self.code
