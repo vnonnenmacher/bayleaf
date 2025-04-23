@@ -1,8 +1,7 @@
 from django.db import models
 from core.models import DosageUnit
 from prescriptions.models import AbstractPrescription, AbstractPrescriptionItem
-from professionals.models import Professional
-from patients.models import Patient
+
 
 class Medication(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -40,9 +39,10 @@ class MedicationItem(AbstractPrescriptionItem):
     dosage_amount = models.DecimalField(max_digits=6, decimal_places=2)
     dosage_unit = models.ForeignKey(DosageUnit, on_delete=models.PROTECT)
     frequency_hours = models.PositiveIntegerField(help_text="Interval between doses, in hours.")
-    start_date = models.DateField()
-    end_date = models.DateField()
     instructions = models.TextField(blank=True)
+    total_unit_amount = models.PositiveIntegerField(
+        help_text="Total number of units (e.g., capsules, tablets) to be taken over the course."
+    )
 
     def __str__(self):
         return f"{self.medication.name} ({self.dosage_amount} {self.dosage_unit.code})"
