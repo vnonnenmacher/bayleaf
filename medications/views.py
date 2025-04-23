@@ -1,25 +1,22 @@
-from rest_framework import generics, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from .models import Medication
 from .serializers import MedicationSerializer
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
 
-class MedicationListView(generics.ListAPIView):
+class MedicationViewSet(viewsets.ModelViewSet):
     queryset = Medication.objects.all()
     serializer_class = MedicationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-
-class MedicationSearchView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
+    @action(detail=False, methods=["get"], url_path="drug-search")
+    def drug_search(self, request):
         key = request.query_params.get("key", "").strip()
         if not key:
             return Response({"error": "Missing search key"}, status=status.HTTP_400_BAD_REQUEST)
 
-        matches = Medication.objects.filter(name__icontains=key).order_by("name")[:20]
-        serializer = MedicationSerializer(matches, many=True)
+        results = Medication.objects.filter(name__icontains=key).order_by("name")[:20]
+        serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
