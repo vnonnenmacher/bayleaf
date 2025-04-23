@@ -7,19 +7,30 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         units = [
-            "mg", "g", "mcg", "kg",
-            "ml", "l",
-            "tablet", "capsule", "pill", "drop", "spray", "patch", "suppository",
-            "unit", "puff", "ampoule", "vial",
+            ("mg", "milligram"),
+            ("g", "gram"),
+            ("mcg", "microgram"),
+            ("kg", "kilogram"),
+            ("ml", "milliliter"),
+            ("l", "liter"),
+            ("tablet", "tablet"),
+            ("capsule", "capsule"),
+            ("pill", "pill"),
+            ("drop", "drop"),
+            ("spray", "spray"),
+            ("patch", "patch"),
+            ("suppository", "suppository"),
+            ("unit", "unit"),
+            ("puff", "puff"),
+            ("ampoule", "ampoule"),
+            ("vial", "vial"),
         ]
 
         created_count = 0
 
-        for unit in units:
-            obj, created = DosageUnit.objects.get_or_create(name=unit)
+        for code, name in units:
+            obj, created = DosageUnit.objects.get_or_create(code=code, defaults={"name": name})
             if created:
                 created_count += 1
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Successfully created {created_count} dosage unit(s)."
-        ))
+        self.stdout.write(self.style.SUCCESS(f"Successfully created {created_count} dosage unit(s)."))
