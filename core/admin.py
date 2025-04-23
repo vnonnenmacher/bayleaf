@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Service, Address, Contact
+from .models import DosageUnit, Service, Address, Contact
 
 
 @admin.register(Service)
@@ -28,3 +28,6 @@ class AddressInline(admin.StackedInline):
 class ContactInline(admin.StackedInline):
     model = Contact
     extra = 0
+
+
+admin.site.register(DosageUnit)
