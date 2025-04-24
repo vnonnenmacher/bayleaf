@@ -1,5 +1,6 @@
 from django.db import models
 from core.models import DosageUnit
+from events.models import ScheduledCheckpointEvent
 from prescriptions.models import AbstractPrescription, AbstractPrescriptionItem
 
 
@@ -46,3 +47,21 @@ class MedicationItem(AbstractPrescriptionItem):
 
     def __str__(self):
         return f"{self.medication.name} ({self.dosage_amount} {self.dosage_unit.code})"
+
+
+class TakeMedicationEvent(ScheduledCheckpointEvent):
+    """
+    Represents a scheduled event for a patient to take a medication.
+    Can optionally be linked to a prescription.
+    """
+
+    prescription = models.ForeignKey(
+        MedicationPrescription, on_delete=models.SET_NULL, null=True, blank=True, related_name="medication_events"
+    )
+
+    class Meta:
+        verbose_name = "Take Medication Event"
+        verbose_name_plural = "Take Medication Events"
+
+    def __str__(self):
+        return f"{self.medication_name} for {self.prescription.patient} at {self.scheduled_to_complete_from}"

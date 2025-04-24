@@ -33,7 +33,9 @@ class BaseEvent(models.Model):
     description = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_events"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="%(class)s_created_events"  # dynamic reverse relation
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="REQUESTED")
 
