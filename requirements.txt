@@ -6,3 +6,4 @@ pillow
 web3
 django-filter
 drf-yasg
+faker

@@ -36,6 +36,10 @@ class Professional(User, Person):
     def __str__(self):
         return f"Professional {self.did}: {self.email}. Role {self.role}"
 
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
 
 class Shift(models.Model):
     WEEKDAYS = [
