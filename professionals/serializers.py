@@ -18,6 +18,12 @@ class RoleSerializer(serializers.ModelSerializer):
         }
 
 
+class ProfessionalListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Professional
+        fields = ["id", "did", "first_name", "last_name", "email", "avatar"]
+
+
 class ProfessionalSerializer(serializers.ModelSerializer):
     """Serializer for Professional with Identifiers, Address & Contact."""
 

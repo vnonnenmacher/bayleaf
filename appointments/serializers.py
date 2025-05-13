@@ -95,7 +95,7 @@ class AppointmentBookingSerializer(serializers.ModelSerializer):
 
 
 class AppointmentListSerializer(serializers.ModelSerializer):
-    professional = serializers.PrimaryKeyRelatedField(read_only=True)
+    professional_did = serializers.UUIDField(source="professional.did", read_only=True)
     patient = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -105,7 +105,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             "scheduled_to",
             "duration_minutes",
             "status",
-            "professional",
+            "professional_did",
             "patient",
             "service",
             "shift",

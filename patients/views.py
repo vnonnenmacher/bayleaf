@@ -1,4 +1,7 @@
 from rest_framework import generics, permissions, filters
+from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
+
 
 from appointments.models import Appointment
 from appointments.serializers import AppointmentListSerializer
@@ -6,6 +9,11 @@ from patients.permissions import IsPatient
 from .serializers import PatientSerializer
 from .models import Patient
 from django.utils.timezone import now
+
+from appointments.filters import apply_appointment_filters
+from rest_framework.response import Response
+from professionals.models import Professional
+from professionals.serializers import ProfessionalListSerializer
 
 
 class PatientCreateView(generics.CreateAPIView):
@@ -49,20 +57,35 @@ class PatientListView(generics.ListAPIView):
     search_fields = ['first_name', 'last_name', 'email']
 
 
-class PatientAppointmentListView(generics.ListAPIView):
-    serializer_class = AppointmentListSerializer
+class PatientAppointmentListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        from appointments.filters import apply_appointment_filters
-
+    def get(self, request):
         try:
-            patient = Patient.objects.get(user_ptr_id=self.request.user.id)
+            patient = Patient.objects.get(user_ptr_id=request.user.id)
         except Patient.DoesNotExist:
-            return Appointment.objects.none()
+            return Response({"appointments": [], "professionals": []})
 
         qs = Appointment.objects.filter(patient=patient)
-        return apply_appointment_filters(qs, self.request).order_by("-scheduled_to")
+        appointments = apply_appointment_filters(qs, request).order_by("-scheduled_to")
+
+        # ✅ Apply pagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 10  # or set page_size_query_param = "page_size" for dynamic size
+
+        paginated_appointments = paginator.paginate_queryset(appointments, request)
+        appointment_serializer = AppointmentListSerializer(paginated_appointments, many=True)
+
+        # ✅ Extract professional UUIDs from paginated list only
+        professional_ids = {appt.professional_id for appt in paginated_appointments}
+        professionals = Professional.objects.filter(did__in=professional_ids)
+        professional_serializer = ProfessionalListSerializer(professionals, many=True)
+
+        # ✅ Return paginated response manually
+        return paginator.get_paginated_response({
+            "appointments": appointment_serializer.data,
+            "professionals": professional_serializer.data,
+        })
 
 
 class NextAppointmentsView(generics.ListAPIView):
