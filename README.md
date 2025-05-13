@@ -90,15 +90,6 @@ Bayleaf pairs with [bayleaf-flutter](https://github.com/vnonnenmacher/bayleaf-fl
 
 ---
 
-## 🗕 Upcoming
-
-- Admin audit logs
-- Role-based access control
-- AI-assisted documentation tools
-- Enhanced ML-based pricing engine
-
----
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see `CONTRIBUTING.md` for setup and code style guides.
