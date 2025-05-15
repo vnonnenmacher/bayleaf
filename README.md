@@ -90,12 +90,6 @@ Bayleaf pairs with [bayleaf-flutter](https://github.com/vnonnenmacher/bayleaf-fl
 
 ---
 
-## 🤝 Contributing
-
-We welcome contributions! Please see `CONTRIBUTING.md` for setup and code style guides.
-
----
-
 ## 📋 License
 
 [GPL-2.0 license](./LICENSE)
