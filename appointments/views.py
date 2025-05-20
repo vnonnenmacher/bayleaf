@@ -88,7 +88,12 @@ class AvailableSlotsView(APIView):
             return Response({"error": "Start date cannot be after end date."}, status=status.HTTP_400_BAD_REQUEST)
 
         available_slots = []
+        doctor_map = {}
+
         current_date = start_date
+        current_datetime = now()
+        today = current_datetime.date()
+        current_time = current_datetime.time()
 
         while current_date <= end_date:
             all_slots = generate_slots(service_ids, current_date)
@@ -99,34 +104,57 @@ class AvailableSlotsView(APIView):
                 .exclude(status="CANCELED")
             )
 
-            filtered_slots = []
-
             for slot in all_slots:
+                doc = slot["professional"]
+
+                # Booked or past slot?
                 is_booked = (
-                    slot["professional"]["id"],
+                    doc["id"],
                     current_date,
                     slot["start_time"]
                 ) in booked_slots
+                is_past = current_date == today and slot["start_time"] <= current_time
 
-                # Skip booked or past slots (if today, only future times allowed)
-                if is_booked:
-                    continue
-                if current_date == today and slot["start_time"] <= current_time:
+                if is_booked or is_past:
                     continue
 
-                slot["date"] = current_date
-                filtered_slots.append(slot)
+                # --- Collect doctor info ---
+                doc_id = doc["id"]
+                if doc_id not in doctor_map:
+                    doctor_map[doc_id] = {
+                        "id": doc_id,
+                        "first_name": doc.get("first_name"),
+                        "last_name": doc.get("last_name"),
+                        "email": doc.get("email"),
+                        "avatar": doc.get("avatar", None),
+                    }
 
-            available_slots.extend(filtered_slots)
+                # --- Prepare slot info (no "professional", add "doctor_id") ---
+                slot_obj = {
+                    "service_id": slot["service_id"],
+                    "start_time": slot["start_time"],
+                    "end_time": slot["end_time"],
+                    "shift_id": slot["shift_id"],
+                    "date": current_date,
+                    "doctor_id": doc_id,
+                }
+                available_slots.append(slot_obj)
+
             current_date += timedelta(days=1)
 
+        # Sort slots by date, then by start_time
         available_slots = sorted(available_slots, key=lambda s: (s["date"], s["start_time"]))
 
+        # Pagination (adapts for in-memory objects, may require custom paginator if not list)
         paginator = AvailableSlotsPagination()
         paginated = paginator.paginate_queryset(available_slots, request)
+        # If ServiceSlotSerializer expects dicts like above, this works. If not, use a custom serializer.
         serializer = ServiceSlotSerializer(paginated, many=True)
 
-        return paginator.get_paginated_response(serializer.data)
+        # Prepare the response
+        paginated_response = paginator.get_paginated_response(serializer.data)
+        paginated_response.data["doctors"] = list(doctor_map.values())
+        return paginated_response
 
 
 class AppointmentBookingView(generics.CreateAPIView):

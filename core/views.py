@@ -2,6 +2,12 @@
 from rest_framework import viewsets, permissions
 from .models import Service
 from .serializers import ServiceSerializer
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(["GET"])
+def healthcheck(request):
+    return Response({"status": "ok"}, status=200)
 
 
 class ServiceViewSet(viewsets.ModelViewSet):

@@ -67,7 +67,7 @@ class PatientAppointmentListView(APIView):
             return Response({"appointments": [], "professionals": []})
 
         qs = Appointment.objects.filter(patient=patient)
-        appointments = apply_appointment_filters(qs, request).order_by("-scheduled_to")
+        appointments = apply_appointment_filters(qs, request).order_by("-scheduled_to").order_by("-created_at")
 
         # ✅ Apply pagination
         paginator = PageNumberPagination()
