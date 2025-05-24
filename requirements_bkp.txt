@@ -1,9 +1,0 @@
-django
-djangorestframework
-djangorestframework-simplejwt
-psycopg2-binary
-pillow
-web3
-django-filter
-drf-yasg
-faker
