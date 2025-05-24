@@ -1,37 +1,66 @@
+version: '3.8'
+
+networks:
+  k8srede:
+    driver: bridge
+
 services:
-  web:
+  django:
     build: .
-    command: >
-      sh -c "python3 manage.py wait_for_db &&
-             python3 manage.py migrate &&
-             python3 manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - DEBUG=1
-      - DB_NAME=bayleaf_db
-      - DB_USER=dbuser
-      - DB_PASSWORD=igrp2020
-      - DB_HOST=db
-      - DB_PORT=5432
+    container_name: django_app
+    restart: always
+    env_file: .env
     depends_on:
       - db
-  
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - media_volume:/app/media/
+      - /run/gunicorn:/run/gunicorn  # Compartilhar socket com o Nginx
+      - /var/log/gunicorn:/var/log  # Montar diretório de logs para persistência
+      - /var/log/vesalus:/var/log/vesalus
+    expose:
+      - "8000"  # Mantendo para comunicação interna com Nginx
+    networks:
+      - k8srede
+
   db:
-    image: postgres:14
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=bayleaf_db
-      - POSTGRES_USER=dbuser
-      - POSTGRES_PASSWORD=igrp2020
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dbuser -d bayleaf_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - k8srede
+
+  nginx_proxy:
+    image: nginx:latest
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"  # Expondo porta 80 para o IP externo
+      - "443:443" # Porta SSL (corrigido o número da porta)
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media/
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /run/gunicorn:/run/gunicorn  # Montar socket do Gunicorn
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # - ./nginx/ssl/server.crt:/etc/nginx/ssl/certsrv.crt
+      # - ./nginx/ssl/server.key:/etc/nginx/ssl/certsrv.key
+    depends_on:
+      - django
+    networks:
+      - k8srede  
 
 volumes:
   postgres_data:
+  static_volume:
+  media_volume:
