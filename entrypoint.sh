@@ -1,30 +1,30 @@
 #!/bin/sh
 
-echo "Aguardando o banco de dados ficar disponível..."
+echo "Waiting for the database to become available..."
 while ! nc -z db 5432; do
   sleep 1
 done
-echo "Banco de dados pronto!"
+echo "Database ready!"
 
-# Aplicar migrações
-echo "Rodando migrações..."
+# Apply migrations
+echo "Running migrations..."
 python3 manage.py makemigrations
 python3 manage.py migrate
 
-# Coletar arquivos estáticos (opcional)
-echo "Coletando arquivos estáticos..."
+# Collect static files (optional)
+echo "Collecting static files..."
 python3 manage.py collectstatic --noinput
 
-# # Remover socket antigo, se existir
+# # Remove old socket if exists
 # rm -f /run/gunicorn/gunicorn.sock
 
-# Criar diretório do socket (caso não exista)
+# Create socket directory (if it does not exist)
 mkdir -p /run/gunicorn
 chown -R root:www-data /run/gunicorn
 chmod -R 775 /run/gunicorn
 
-# Iniciar Gunicorn na porta 8000
-echo "Iniciando Gunicorn..."
+# Start Gunicorn on port 8000
+echo "Starting Gunicorn..."
 exec gunicorn --preload vesalus.wsgi:application \
     --workers 5 \
     --bind 0.0.0.0:8000 \
