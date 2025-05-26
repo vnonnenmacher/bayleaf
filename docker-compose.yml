@@ -1,66 +1,47 @@
-version: '3.8'
-
-networks:
-  k8srede:
-    driver: bridge
+version: '3.9'
 
 services:
-  django:
+  web:
     build: .
-    container_name: django_app
-    restart: always
-    env_file: .env
-    depends_on:
-      - db
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}  
+    command: gunicorn bayleaf.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - .:/app
-      - static_volume:/app/static
-      - media_volume:/app/media/
-      - /run/gunicorn:/run/gunicorn  # Share socket with Nginx
-      - /var/log/gunicorn:/var/log  # Mount log directory for persistence
-      - /var/log/vesalus:/var/log/vesalus
     expose:
-      - "8000"  # Keeping for internal communication with Nginx
-    networks:
-      - k8srede
+      - "8000"
+    environment:
+      - DEBUG=0
+      - DB_NAME=bayleaf_db
+      - DB_USER=dbuser
+      - DB_PASSWORD=igrp2020
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
 
   db:
-    image: postgres:15
-    container_name: postgres_db
-    restart: always
-    env_file: .env
+    image: postgres:14
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - k8srede
+    environment:
+      - POSTGRES_DB=bayleaf_db
+      - POSTGRES_USER=dbuser
+      - POSTGRES_PASSWORD=igrp2020
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d bayleaf_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  nginx_proxy:
+  nginx:
     image: nginx:latest
-    container_name: nginx_proxy
-    restart: always
     ports:
-      - "80:80"  # Exposing port 80 to external IP
-      - "443:443" # SSL Port (Fixed port number)
+      - "80:80"
+      - "443:443"
     volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media/
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /run/gunicorn:/run/gunicorn  # Mount Gunicorn socket
+      - ./nginx/bayleaf.conf:/etc/nginx/conf.d/default.conf
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      # - ./nginx/ssl/server.crt:/etc/nginx/ssl/certsrv.crt
-      # - ./nginx/ssl/server.key:/etc/nginx/ssl/certsrv.key
     depends_on:
-      - django
-    networks:
-      - k8srede  
+      - web
 
 volumes:
   postgres_data:
-  static_volume:
-  media_volume:
