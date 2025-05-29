@@ -1,10 +1,12 @@
+from datetime import datetime, timedelta
 from rest_framework import serializers
 
+from professionals.helpers import get_next_n_weekday_dates
 from users.models import Identifier, IdentifierType
 from users.serializers import IdentifierSerializer
-from professionals.models import Role, Shift, Professional, Specialization
+from professionals.models import Role, ServiceSlot, Shift, Professional, Specialization
 from core.serializers import AddressSerializer, ContactSerializer
-from core.models import Address, Contact
+from core.models import Address, Contact, Service
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -193,6 +195,37 @@ class ShiftSerializer(serializers.ModelSerializer):
             "to_time": {"required": True}
         }
 
+    def create(self, validated_data):
+        shift = Shift.objects.create(**validated_data)
+
+        from_time = validated_data["from_time"]
+        to_time = validated_data["to_time"]
+        slot_duration = validated_data["slot_duration"]
+        weekday = validated_data["weekday"]
+
+        # 1. Get next 4 dates for this weekday
+        slot_dates = get_next_n_weekday_dates(weekday, n=4)
+
+        slots = []
+        for slot_date in slot_dates:
+            # Set up start and end datetimes for the day
+            dt_start = datetime.combine(slot_date, from_time)
+            dt_end = datetime.combine(slot_date, to_time)
+            current = dt_start
+
+            # 2. Create slots for the whole day, at interval of slot_duration
+            while current + timedelta(minutes=slot_duration) <= dt_end:
+                slot = ServiceSlot(
+                    shift=shift,
+                    start_time=current,
+                    end_time=current + timedelta(minutes=slot_duration)
+                )
+                slots.append(slot)
+                current += timedelta(minutes=slot_duration)
+
+        ServiceSlot.objects.bulk_create(slots)
+        return shift
+
 
 class ReducedProfessionalSerializer(serializers.Serializer):
     """
@@ -204,32 +237,33 @@ class ReducedProfessionalSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
-class ServiceSlotSerializer(serializers.Serializer):
-    """
-    Serializer for service slots.
-    """
-    professional = ReducedProfessionalSerializer()
-    service_id = serializers.IntegerField()
-    start_time = serializers.TimeField(format="%H:%M")
-    end_time = serializers.TimeField(format="%H:%M")
+class ProfessionalMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Professional
+        fields = ["id", "first_name", "last_name", "email", "avatar"]
 
-    def to_representation(self, instance):
-        """
-        Ensure we are working with a dictionary, not an object.
-        """
-        if isinstance(instance, dict):
-            return instance  # Already a dictionary, return as is
-        return {
-            "professional": {
-                "id": instance.professional_id,
-                "first_name": instance.professional_name.split(" ")[0],  # Extract first name
-                "last_name": instance.professional_name.split(" ")[1] if " " in instance.professional_name else "",
-                "email": instance.professional_email,
-            },
-            "service_id": instance.service_id,
-            "start_time": instance.start_time.strftime("%H:%M"),
-            "end_time": instance.end_time.strftime("%H:%M"),
-        }
+
+class ServiceMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ["id", "name"]
+
+
+class ServiceSlotSerializer(serializers.ModelSerializer):
+    shift_id = serializers.IntegerField(source="shift.id", read_only=True)
+    professional = ProfessionalMiniSerializer(source="shift.professional", read_only=True)
+    service = ServiceMiniSerializer(source="shift.service", read_only=True)
+
+    class Meta:
+        model = ServiceSlot
+        fields = [
+            "id",
+            "shift_id",
+            "start_time",
+            "end_time",
+            "professional",
+            "service",
+        ]
 
 
 class SpecializationSerializer(serializers.ModelSerializer):

@@ -6,14 +6,13 @@ from datetime import datetime, timedelta
 from appointments.models import Appointment
 from appointments.serializers import AppointmentBookingSerializer, AppointmentListSerializer
 from patients.models import Patient
-from professionals.helpers import generate_slots
-from professionals.models import Professional
-from professionals.serializers import ServiceSlotSerializer
-from django.utils.timezone import now
+from professionals.models import Professional, ServiceSlot
+from professionals.serializers import ProfessionalMiniSerializer, ServiceSlotSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from drf_yasg.utils import swagger_auto_schema
+from django.db.models import OuterRef, Exists
 from drf_yasg import openapi
 
 
@@ -55,106 +54,104 @@ class AvailableSlotsView(APIView):
                 format="date"
             ),
         ],
-        responses={200: ServiceSlotSerializer(many=True)}
+        responses={
+            200: openapi.Response(
+                "Available slots",
+                ServiceSlotSerializer(many=True),
+                examples={
+                    "application/json": {
+                        "count": 2,
+                        "next": None,
+                        "previous": None,
+                        "results": [
+                            {
+                                "id": 123,
+                                "shift_id": 5,
+                                "start_time": "2025-06-01T10:00:00Z",
+                                "end_time": "2025-06-01T10:30:00Z",
+                                "professional": {
+                                    "id": 12,
+                                    "first_name": "Ana",
+                                    "last_name": "Silva",
+                                    "email": "ana@domain.com",
+                                    "avatar": "https://cdn.../avatar.png"
+                                },
+                                "service": {
+                                    "id": 2,
+                                    "name": "Cardiology"
+                                }
+                            }
+                        ],
+                        "doctors": [
+                            {
+                                "id": 12,
+                                "first_name": "Ana",
+                                "last_name": "Silva",
+                                "email": "ana@domain.com",
+                                "avatar": "https://cdn.../avatar.png"
+                            }
+                        ]
+                    }
+                }
+            ),
+            400: "Invalid or missing parameters"
+        }
     )
     def get(self, request):
         service_ids = request.query_params.getlist("services", [])
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
 
-        return self.fetch_slots(request, service_ids, start_date, end_date)
-
-    def fetch_slots(self, request, service_ids, start_date, end_date):
         if not service_ids or not start_date or not end_date:
             return Response({"error": "Missing required parameters."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+            start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # inclusive
         except ValueError:
             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        current_datetime = now()
-        today = current_datetime.date()
-        current_time = current_datetime.time()
-
-        if end_date < today:
+        now_dt = datetime.now()
+        if end_date_dt.date() < now_dt.date():
             return Response({"error": "End date cannot be in the past."}, status=status.HTTP_400_BAD_REQUEST)
+        if start_date_dt.date() < now_dt.date():
+            start_date_dt = now_dt
 
-        if start_date < today:
-            start_date = today
+        # Filter all slots within range and services
+        service_slots = ServiceSlot.objects.filter(
+            shift__service_id__in=service_ids,
+            start_time__gte=start_date_dt,
+            start_time__lt=end_date_dt
+        )
 
-        if start_date > end_date:
-            return Response({"error": "Start date cannot be after end date."}, status=status.HTTP_400_BAD_REQUEST)
+        # Exclude slots with active appointments (not canceled)
+        active_appointments = Appointment.objects.filter(
+            service_slot=OuterRef('pk')
+        ).exclude(status="CANCELED")
+        service_slots = service_slots.annotate(
+            is_booked=Exists(active_appointments)
+        ).filter(is_booked=False)
 
-        available_slots = []
-        doctor_map = {}
+        # Only in the future
+        service_slots = service_slots.filter(start_time__gte=now_dt)
 
-        current_date = start_date
-        current_datetime = now()
-        today = current_datetime.date()
-        current_time = current_datetime.time()
-
-        while current_date <= end_date:
-            all_slots = generate_slots(service_ids, current_date)
-
-            booked_slots = set(
-                (appt.professional.id, appt.scheduled_to.date(), appt.scheduled_to.time())
-                for appt in Appointment.objects.filter(service_id__in=service_ids)
-                .exclude(status="CANCELED")
-            )
-
-            for slot in all_slots:
-                doc = slot["professional"]
-
-                # Booked or past slot?
-                is_booked = (
-                    doc["id"],
-                    current_date,
-                    slot["start_time"]
-                ) in booked_slots
-                is_past = current_date == today and slot["start_time"] <= current_time
-
-                if is_booked or is_past:
-                    continue
-
-                # --- Collect doctor info ---
-                doc_id = doc["id"]
-                if doc_id not in doctor_map:
-                    doctor_map[doc_id] = {
-                        "id": doc_id,
-                        "first_name": doc.get("first_name"),
-                        "last_name": doc.get("last_name"),
-                        "email": doc.get("email"),
-                        "avatar": doc.get("avatar", None),
-                    }
-
-                # --- Prepare slot info (no "professional", add "doctor_id") ---
-                slot_obj = {
-                    "service_id": slot["service_id"],
-                    "start_time": slot["start_time"],
-                    "end_time": slot["end_time"],
-                    "shift_id": slot["shift_id"],
-                    "date": current_date,
-                    "doctor_id": doc_id,
-                }
-                available_slots.append(slot_obj)
-
-            current_date += timedelta(days=1)
-
-        # Sort slots by date, then by start_time
-        available_slots = sorted(available_slots, key=lambda s: (s["date"], s["start_time"]))
-
-        # Pagination (adapts for in-memory objects, may require custom paginator if not list)
+        # Paginate
         paginator = AvailableSlotsPagination()
-        paginated = paginator.paginate_queryset(available_slots, request)
-        # If ServiceSlotSerializer expects dicts like above, this works. If not, use a custom serializer.
-        serializer = ServiceSlotSerializer(paginated, many=True)
+        paginated_slots = paginator.paginate_queryset(service_slots, request)
 
-        # Prepare the response
-        paginated_response = paginator.get_paginated_response(serializer.data)
-        paginated_response.data["doctors"] = list(doctor_map.values())
-        return paginated_response
+        # Serialize
+        slot_serializer = ServiceSlotSerializer(paginated_slots, many=True)
+
+        # Build doctors map (unique professionals in results)
+        doctor_map = {}
+        for slot in paginated_slots:
+            pro = slot.shift.professional
+            if pro.id not in doctor_map:
+                doctor_map[pro.id] = ProfessionalMiniSerializer(pro).data
+
+        response = paginator.get_paginated_response(slot_serializer.data)
+        response.data["doctors"] = list(doctor_map.values())
+        return response
 
 
 class AppointmentBookingView(generics.CreateAPIView):

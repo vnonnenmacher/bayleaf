@@ -67,3 +67,18 @@ class Shift(models.Model):
     def __str__(self):
         return (f"{self.professional.email} - {self.get_weekday_display()} ("
                 f"{self.service.name}) [{self.from_time} - {self.to_time}]")
+
+
+class ServiceSlot(models.Model):
+
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name="slots")
+    start_time = models.DateTimeField()  # Start time of the slot
+    end_time = models.DateTimeField()  # End time of the slot
+
+    class Meta:
+        verbose_name = "Service Slot"
+        verbose_name_plural = "Service Slots"
+        unique_together = ("shift", "start_time")
+
+    def __str__(self):
+        return f"Slot {self.start_time} - {self.end_time} for {self.shift.professional.email}"

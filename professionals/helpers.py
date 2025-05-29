@@ -43,3 +43,17 @@ def generate_slots(service_ids, date):
             current_time += slot_duration  # Move to the next slot
 
     return slots  # ✅ Now returning a list of dictionaries
+
+
+def get_next_n_weekday_dates(weekday: int, n: int = 4):
+    """
+    Returns a list of the next `n` dates (as datetime.date) that fall on the given weekday, starting from today.
+    """
+    today = datetime.now().date()
+    days_ahead = (weekday - today.weekday() + 7) % 7
+    if days_ahead == 0:
+        first = today
+    else:
+        first = today + timedelta(days=days_ahead)
+    dates = [first + timedelta(weeks=i) for i in range(n)]
+    return dates
