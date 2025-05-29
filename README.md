@@ -65,15 +65,15 @@ Bayleaf pairs with [bayleaf-flutter](https://github.com/vnonnenmacher/bayleaf-fl
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
-Fork the Project
+- Fork the Project
 
-Create your Feature Branch (git checkout -b feature/AmazingFeature)
+- Create your Feature Branch (git checkout -b feature/AmazingFeature)
 
-Commit your Changes (git commit -m 'Add some AmazingFeature')
+- Commit your Changes (git commit -m 'Add some AmazingFeature')
 
-Push to the Branch (git push origin feature/AmazingFeature)
+- Push to the Branch (git push origin feature/AmazingFeature)
 
-Open a Pull Request
+- Open a Pull Request
 
 License
 This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
@@ -85,7 +85,7 @@ Distribute modified versions, provided they are also under the GPL-2.0.
 
 Access the complete source code of any distributed version.
 
-⚠️ Requirements when redistributing:
+## ⚠️ Requirements when redistributing:
 You must keep the same license (GPL-2.0) for derivative works.
 
 You must provide the full source code to end users.
