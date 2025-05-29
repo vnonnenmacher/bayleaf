@@ -84,6 +84,7 @@ This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
 ---
 
 ## ⚠️ Requirements when redistributing:
+
 You must keep the same license (GPL-2.0) for derivative works.
 
 You must provide the full source code to end users.
@@ -93,6 +94,7 @@ You must include copyright and license notices.
 ---
 
 ## 💼 Commercial License
+
 For companies or organizations that wish to:
 
 - Integrate this software into proprietary solutions.
