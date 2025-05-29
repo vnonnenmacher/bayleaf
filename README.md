@@ -4,35 +4,6 @@ Bayleaf is a modular, scalable backend platform for healthcare applications, bui
 
 ---
 
-## 🚀 Features
-
-- **User Management**
-  - Professional-oriented user model with dynamic roles
-  - Easily represent doctors, nurses, caregivers, attendants, or any other health professional
-  - Identifier system with custom types (e.g., CRM, insurance ID)
-
-- **Scheduling and Booking**
-  - Synchronous and asynchronous appointment flows
-  - Shift and availability management per doctor
-  - Booking, cancellation, confirmation, and completion endpoints
-
-- **Organizations and Services**
-  - Many-to-many doctor–organization relationships
-  - Service catalog with support for specializations and service types
-
-- **Medications & Vaccines**
-  - Segmented vaccine tracking (Upcoming / Taken)
-  - Medication list and documentation features
-
-- **Event System**
-  - Centralized event model for appointments, medication events, and more
-  - Status transitions and lifecycle management
-
-- **Biological Sample Tracking (Planned)**
-  - Blockchain-based internal audit trail for lab sample handling
-
----
-
 ## ⚙️ Tech Stack
 
 - **Backend:** Django, Django REST Framework
@@ -90,8 +61,49 @@ Bayleaf pairs with [bayleaf-flutter](https://github.com/vnonnenmacher/bayleaf-fl
 
 ---
 
-## 📋 License
+## Contributing
 
-[GPL-2.0 license](./LICENSE)
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
----
+Fork the Project
+
+Create your Feature Branch (git checkout -b feature/AmazingFeature)
+
+Commit your Changes (git commit -m 'Add some AmazingFeature')
+
+Push to the Branch (git push origin feature/AmazingFeature)
+
+Open a Pull Request
+
+License
+This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
+
+## ✅ What you can do under the GPL-2.0:
+Use, modify, and redistribute the source code freely.
+
+Distribute modified versions, provided they are also under the GPL-2.0.
+
+Access the complete source code of any distributed version.
+
+⚠️ Requirements when redistributing:
+You must keep the same license (GPL-2.0) for derivative works.
+
+You must provide the full source code to end users.
+
+You must include copyright and license notices.
+
+## 💼 Commercial License
+For companies or organizations that wish to:
+
+Integrate this software into proprietary solutions.
+
+Distribute modified versions without releasing the source code.
+
+Develop exclusive features under private contracts.
+
+A commercial license is available upon request.
+
+For inquiries or to acquire a commercial license, contact:
+
+Email: vnonnenmacher@gmail.com
+© 2025 Nonnenmacher Tecnologia Ltda
