@@ -95,11 +95,9 @@ You must include copyright and license notices.
 ## 💼 Commercial License
 For companies or organizations that wish to:
 
-Integrate this software into proprietary solutions.
-
-Distribute modified versions without releasing the source code.
-
-Develop exclusive features under private contracts.
+-Integrate this software into proprietary solutions.
+-Distribute modified versions without releasing the source code.
+-Develop exclusive features under private contracts.
 
 A commercial license is available upon request.
 
