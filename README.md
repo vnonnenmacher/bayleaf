@@ -75,15 +75,9 @@ Contributions are what make the open-source community such an amazing place to l
 
 - Open a Pull Request
 
-License
+## License
+
 This project is licensed under the GNU General Public License v2.0 (GPL-2.0).
-
-## ✅ What you can do under the GPL-2.0:
-Use, modify, and redistribute the source code freely.
-
-Distribute modified versions, provided they are also under the GPL-2.0.
-
-Access the complete source code of any distributed version.
 
 ## ⚠️ Requirements when redistributing:
 You must keep the same license (GPL-2.0) for derivative works.
