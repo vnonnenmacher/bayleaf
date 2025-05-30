@@ -7,7 +7,6 @@ from appointments.models import Appointment
 from appointments.serializers import AppointmentBookingSerializer, AppointmentListSerializer
 from patients.models import Patient
 from professionals.models import Professional, ServiceSlot
-from professionals.serializers import ProfessionalMiniSerializer, ServiceSlotSerializer
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
@@ -57,7 +56,8 @@ class AvailableSlotsView(APIView):
         responses={
             200: openapi.Response(
                 "Available slots",
-                ServiceSlotSerializer(many=True),
+                # You can adjust or omit the serializer here if it's not needed.
+                # ServiceSlotSerializer(many=True),
                 examples={
                     "application/json": {
                         "count": 2,
@@ -69,13 +69,7 @@ class AvailableSlotsView(APIView):
                                 "shift_id": 5,
                                 "start_time": "2025-06-01T10:00:00Z",
                                 "end_time": "2025-06-01T10:30:00Z",
-                                "professional": {
-                                    "id": 12,
-                                    "first_name": "Ana",
-                                    "last_name": "Silva",
-                                    "email": "ana@domain.com",
-                                    "avatar": "https://cdn.../avatar.png"
-                                },
+                                "professional_id": 12,
                                 "service": {
                                     "id": 2,
                                     "name": "Cardiology"
@@ -139,18 +133,40 @@ class AvailableSlotsView(APIView):
         paginator = AvailableSlotsPagination()
         paginated_slots = paginator.paginate_queryset(service_slots, request)
 
-        # Serialize
-        slot_serializer = ServiceSlotSerializer(paginated_slots, many=True)
-
         # Build doctors map (unique professionals in results)
         doctor_map = {}
+        results = []
         for slot in paginated_slots:
             pro = slot.shift.professional
-            if pro.id not in doctor_map:
-                doctor_map[pro.id] = ProfessionalMiniSerializer(pro).data
+            service = slot.shift.service
 
-        response = paginator.get_paginated_response(slot_serializer.data)
-        response.data["doctors"] = list(doctor_map.values())
+            # Compose slot dict
+            slot_dict = {
+                "id": slot.id,
+                "shift_id": slot.shift.id,
+                "start_time": slot.start_time.isoformat(),
+                "end_time": slot.end_time.isoformat(),
+                "professional_id": pro.id,
+                "service": {
+                    "id": service.id,
+                    "name": service.name,
+                },
+            }
+            results.append(slot_dict)
+
+            # Add professional to doctor map if not already present
+            if pro.id not in doctor_map:
+                doctor_map[pro.id] = {
+                    "id": pro.id,
+                    "first_name": pro.first_name,
+                    "last_name": pro.last_name,
+                    "email": pro.email,
+                    "avatar": pro.avatar.url if getattr(pro, "avatar", None) and pro.avatar and hasattr(pro.avatar, "url") else None,
+                }
+
+        # Build paginated response manually since we bypassed the serializer
+        response = paginator.get_paginated_response(results)
+        response.data["professionals"] = list(doctor_map.values())
         return response
 
 
