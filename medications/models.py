@@ -29,12 +29,13 @@ class MedicationPrescription(AbstractPrescription):
 
 class MedicationItem(AbstractPrescriptionItem):
     """
-    Represents a single medication item within a prescription.
+    Represents a single medication item prescription.
     """
     prescription = models.ForeignKey(
         MedicationPrescription,
         on_delete=models.CASCADE,
-        related_name="medication_items"
+        related_name="medication_items",
+        null=True
     )
     medication = models.ForeignKey(Medication, on_delete=models.CASCADE)
     dosage_amount = models.DecimalField(max_digits=6, decimal_places=2)
@@ -55,8 +56,8 @@ class TakeMedicationEvent(ScheduledCheckpointEvent):
     Can optionally be linked to a prescription.
     """
 
-    prescription = models.ForeignKey(
-        MedicationPrescription, on_delete=models.SET_NULL, null=True, blank=True, related_name="medication_events"
+    medication_item = models.ForeignKey(
+        MedicationItem, on_delete=models.SET_NULL, null=True, blank=True, related_name="medication_events"
     )
 
     class Meta:

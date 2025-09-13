@@ -3,8 +3,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from professionals.models import Professional
-
 from .models import Medication
 from .serializers import MedicationPrescribeSerializer, MedicationSerializer
 
@@ -23,11 +21,6 @@ class MedicationViewSet(viewsets.ModelViewSet):
         results = Medication.objects.filter(name__icontains=key).order_by("name")[:20]
         serializer = self.get_serializer(results, many=True)
         return Response(serializer.data)
-
-
-class IsProfessional(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return Professional.objects.filter(user_ptr_id=request.user.id).exists()
 
 
 class MedicationPrescribeView(APIView):
