@@ -14,6 +14,7 @@ from appointments.filters import apply_appointment_filters
 from rest_framework.response import Response
 from professionals.models import Professional
 from professionals.serializers import ProfessionalListSerializer
+from users.permissions import IsBayleafAPIToken
 
 
 class PatientCreateView(generics.CreateAPIView):
@@ -23,12 +24,11 @@ class PatientCreateView(generics.CreateAPIView):
 
 class PatientRetrieveView(generics.RetrieveAPIView):
     serializer_class = PatientSerializer
-    permission_classes = [IsPatient]  # Use the app-specific permission
+    permission_classes = [IsPatient, IsBayleafAPIToken]
 
     def get_object(self):
-        """Ensure the authenticated user is retrieved as a Patient instance."""
         user = self.request.user
-        return Patient.objects.select_related().filter(id=user.id).first()
+        return Patient.objects.select_related().get(user_ptr_id=user.id)
 
 
 class PatientUpdateView(generics.RetrieveUpdateAPIView):

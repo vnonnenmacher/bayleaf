@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bayleaf Chat Token</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:2rem;line-height:1.35;max-width:840px}
+    label{display:block;margin:.5rem 0 .25rem}
+    input,button,textarea{font:inherit;padding:.6rem .7rem;border:1px solid #ccc;border-radius:8px;width:100%;box-sizing:border-box}
+    button{cursor:pointer}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .small{font-size:.9rem;color:#555}
+  </style>
+</head>
+<body>
+  <h1>Bayleaf Chat Token</h1>
+  <p class="small">API base: <b id="apiBase">http://127.0.0.1:8000</b></p>
+
+  <div class="row">
+    <div>
+      <label>Email</label>
+      <input id="email" placeholder="you@example.com" autocomplete="username email" />
+    </div>
+    <div>
+      <label>Password</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+  </div>
+
+  <button id="btn" style="margin-top:12px">Get Chat Token</button>
+  <div id="status" class="small" style="margin:.5rem 0 0;"></div>
+
+  <label style="margin-top:14px">User ID (decoded from token)</label>
+  <input id="userId" class="mono" readonly />
+
+  <label style="margin-top:10px">Patient ID (if present)</label>
+  <input id="patientId" class="mono" readonly />
+
+  <label style="margin-top:10px">Token (Authorization: Bearer …)</label>
+  <textarea id="chatToken" class="mono" rows="4" readonly></textarea>
+
+  <details style="margin-top:14px">
+    <summary>Optional: Call your Agent Chat now</summary>
+    <label style="margin-top:8px">Chat URL</label>
+    <input id="chatUrl" placeholder="http://127.0.0.1:8080/agents/treatment/chat" />
+    <label>Message</label>
+    <input id="chatMsg" placeholder="Estou sentindo muita dor de cabeça" />
+    <button id="btnChat" style="margin-top:10px">POST chat with token</button>
+    <label style="margin-top:10px">Chat response</label>
+    <textarea id="chatOut" class="mono" rows="6" readonly></textarea>
+  </details>
+
+  <script>
+    const API = "http://127.0.0.1:8000"; // change if needed
+
+    const el = s => document.querySelector(s);
+    const pad = s => s + "=".repeat((4 - s.length % 4) % 4);
+    function decodeJwtPayload(token){
+      try{
+        const payload = token.split(".")[1];
+        if(!payload) return null;
+        const json = atob(pad(payload).replace(/-/g, '+').replace(/_/g, '/'));
+        return JSON.parse(json);
+      }catch{ return null; }
+    }
+    async function post(url, body){
+      const res = await fetch(url, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body),
+        credentials:"omit",
+      });
+      const text = await res.text();
+      let json; try{ json = JSON.parse(text); } catch { json = { raw: text }; }
+      return { ok: res.ok, status: res.status, json };
+    }
+    function setStatus(msg){ el("#status").textContent = msg; }
+
+    // Single-step: email+password -> /api/users/chat-token/ -> token for chat & API calls
+    el("#btn").addEventListener("click", async ()=>{
+      setStatus("Requesting chat token…");
+      el("#userId").value = ""; el("#patientId").value = ""; el("#chatToken").value = "";
+      const email = el("#email").value.trim();
+      const password = el("#password").value;
+
+      const r = await post(`${API}/api/users/chat-token/`, { email, password });
+      if(!r.ok){ setStatus(`Failed (${r.status}) ${JSON.stringify(r.json)}`); return; }
+
+      const token = r.json.access_token;
+      el("#chatToken").value = token;
+
+      const p = decodeJwtPayload(token) || {};
+      el("#userId").value = p.user_id ?? p.sub ?? "";
+      el("#patientId").value = p.patient_id ?? "";
+      setStatus(`OK. Expires in ${r.json.expires_in}s. aud=${p.aud || ""}`);
+    });
+
+    // Optional: call your Agent with the token (Agent forwards this Authorization to Bayleaf)
+    el("#btnChat").addEventListener("click", async ()=>{
+      const token = el("#chatToken").value.trim();
+      const url = el("#chatUrl").value.trim();
+      const msg = el("#chatMsg").value.trim() || "Olá!";
+      if(!token) return setStatus("No token yet.");
+      if(!url) return setStatus("Enter Chat URL.");
+
+      setStatus("Posting to chat…");
+      try{
+        const res = await fetch(url, {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            channel: "bayleaf_app",
+            patient_id: null,        // your Agent can ignore/override; token already has user/patient
+            message: msg,
+            conversation_id: null,
+            lang: "pt-BR"
+          })
+        });
+        const txt = await res.text();
+        el("#chatOut").value = txt;
+        setStatus(res.ok ? "Chat OK" : `Chat HTTP ${res.status}`);
+      }catch(e){
+        el("#chatOut").value = String(e);
+        setStatus("Chat network error");
+      }
+    });
+  </script>
+</body>
+</html>
