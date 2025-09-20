@@ -9,7 +9,7 @@ class AbstractPrescription(models.Model):
     Abstract base class for any type of prescription (e.g. medications, treatments, labs).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
+
     professional = models.ForeignKey(
         Professional,
         on_delete=models.CASCADE,
@@ -35,6 +35,12 @@ class AbstractPrescriptionItem(models.Model):
         on_delete=models.CASCADE,
         related_name="items"
     )
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.CASCADE,
+        related_name="%(class)s_items"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True

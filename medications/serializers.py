@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from core.serializers import DosageUnitSerializer
 from patients.models import Patient
 from professionals.models import Professional
 from core.models import DosageUnit
@@ -54,3 +55,22 @@ class MedicationPrescribeSerializer(serializers.Serializer):
         )
 
         return prescription
+
+
+class MedicationItemSerializer(serializers.ModelSerializer):
+    # Return the full medication object (not just the ID)
+    medication = MedicationSerializer(read_only=True)
+    # Keep dosage_unit readable too (code + name); if you prefer just code, swap to StringRelatedField.
+    dosage_unit = DosageUnitSerializer(read_only=True)
+
+    class Meta:
+        model = MedicationItem
+        fields = (
+            "id",
+            "medication",
+            "dosage_amount",
+            "dosage_unit",
+            "frequency_hours",
+            "instructions",
+            "total_unit_amount",
+        )
