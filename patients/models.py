@@ -11,4 +11,4 @@ class Patient(User, Person):
         verbose_name_plural = "Patients"
 
     def __str__(self):
-        return f"Patient {self.pid}: {self.email}"
+        return f"{self.email}"
