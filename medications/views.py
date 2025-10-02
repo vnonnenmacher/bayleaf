@@ -16,6 +16,8 @@ from .serializers import (
     MedicationSerializer,
 )
 
+from medications.helpers.add_medication_helper import AddMedicationHelper
+
 
 class MedicationViewSet(viewsets.ModelViewSet):
     queryset = Medication.objects.all()
@@ -65,32 +67,31 @@ class MyMedicationsView(ListAPIView):
 
 
 class MyMedicationItemCreateView(APIView):
-    """
-    Create a MedicationItem for the logged-in patient, not linked to a prescription.
-    """
     permission_classes = [IsPatient | IsBayleafAPIToken]
 
     def post(self, request):
         serializer = MedicationItemCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            item = serializer.save()
+            item = serializer.save()  # item.patient is set via serializer create
+            # optional scheduling inputs from client:
+            first_dose_at = request.data.get("first_dose_at")  # ISO8601 or omitted
+            window_minutes = int(request.data.get("window_minutes", 90))
+
+            helper = AddMedicationHelper(created_by_user=request.user)
+            helper.create_item_with_events(
+                item=item,
+                first_dose_at=first_dose_at,
+                window_minutes=window_minutes,
+            )
             return Response(MedicationItemSerializer(item).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# NEW: Retrieve + Update + Delete in one patient-scoped detail view
 class MyMedicationItemDetailView(RetrieveUpdateDestroyAPIView):
-    """
-    GET: retrieve a single item
-    PATCH/PUT: update item fields (medication, dosage_amount, dosage_unit, frequency_hours, total_unit_amount, instructions)
-    DELETE: delete the item
-    All operations are scoped to the caller's own items via patient__user_ptr_id.
-    """
     permission_classes = [IsPatient | IsBayleafAPIToken]
     lookup_url_kwarg = "id"
 
     def get_queryset(self):
-        # Scope to the current patient's items (works for OBO and patient JWT)
         return (
             MedicationItem.objects
             .filter(patient__user_ptr_id=self.request.user.id)
@@ -98,17 +99,47 @@ class MyMedicationItemDetailView(RetrieveUpdateDestroyAPIView):
         )
 
     def get_serializer_class(self):
-        # Use read serializer for GET; write serializer for PUT/PATCH
         if self.request.method in ("PUT", "PATCH"):
             return MedicationItemUpdateSerializer
         return MedicationItemSerializer
 
     def update(self, request, *args, **kwargs):
-        # Use write serializer to validate & save, then respond with read serializer
         instance = self.get_object()
         partial = request.method == "PATCH"
-        write_serializer = MedicationItemUpdateSerializer(instance, data=request.data, partial=partial, context={"request": request})
+
+        # capture pre-change schedule fields
+        old_freq = instance.frequency_hours
+        old_total = instance.total_unit_amount
+
+        write_serializer = MedicationItemUpdateSerializer(
+            instance, data=request.data, partial=partial, context={"request": request}
+        )
         write_serializer.is_valid(raise_exception=True)
         item = write_serializer.save()
+
+        # figure out if schedule changed
+        schedule_changed = (
+            (old_freq != item.frequency_hours) or
+            (old_total != item.total_unit_amount)
+        )
+
+        first_dose_at = request.data.get("first_dose_at")  # optional new anchor
+        window_minutes = int(request.data.get("window_minutes", 90))
+
+        helper = AddMedicationHelper(created_by_user=request.user)
+        helper.update_item_and_events(
+            item=item,
+            schedule_changed=schedule_changed or (first_dose_at is not None),
+            first_dose_at=first_dose_at,
+            window_minutes=window_minutes,
+        )
+
         read_data = MedicationItemSerializer(item).data
         return Response(read_data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        item = self.get_object()
+        delete_completed = bool(request.query_params.get("delete_completed", False))
+        helper = AddMedicationHelper(created_by_user=request.user)
+        helper.remove_item_and_events(item=item, delete_completed=delete_completed)
+        return Response(status=status.HTTP_204_NO_CONTENT)

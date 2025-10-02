@@ -65,4 +65,4 @@ class TakeMedicationEvent(ScheduledCheckpointEvent):
         verbose_name_plural = "Take Medication Events"
 
     def __str__(self):
-        return f"{self.medication_name} for {self.prescription.patient} at {self.scheduled_to_complete_from}"
+        return f"{self.medication_item.medication.name} for {self.medication_item.patient} at {self.scheduled_to_complete_from}"
