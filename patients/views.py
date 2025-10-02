@@ -24,7 +24,7 @@ class PatientCreateView(generics.CreateAPIView):
 
 class PatientRetrieveView(generics.RetrieveAPIView):
     serializer_class = PatientSerializer
-    permission_classes = [IsPatient, IsBayleafAPIToken]
+    permission_classes = [IsPatient | IsBayleafAPIToken]
 
     def get_object(self):
         user = self.request.user
