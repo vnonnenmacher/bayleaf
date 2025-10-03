@@ -104,11 +104,14 @@ WSGI_APPLICATION = "bayleaf.wsgi.application"
 # ------------------------------------------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "bayleaf",           # same as POSTGRES_DB in docker-compose
+        "USER": "bayleaf",           # same as POSTGRES_USER
+        "PASSWORD": "bayleaf",       # same as POSTGRES_PASSWORD
+        "HOST": "db",                # service name from docker-compose.yml
+        "PORT": "5432",              # default Postgres port
     }
 }
-
 # ------------------------------------------------------------
 # Password validation
 # ------------------------------------------------------------
