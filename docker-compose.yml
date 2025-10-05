@@ -3,25 +3,29 @@ version: "3.9"
 services:
   api:
     build: .
-    command: >
-      sh -c "python3 manage.py wait_for_db &&
-             python3 manage.py migrate &&
-             python3 manage.py runserver 0.0.0.0:8000"
     working_dir: /usr/src/app
+    command: >
+      sh -c "
+        python3 manage.py migrate --noinput &&
+        python3 manage.py collectstatic --noinput &&
+        uwsgi --ini /usr/src/app/uwsgi.ini
+      "
     volumes:
       - .:/usr/src/app
     ports:
-      - "8000:8000"     # public for local dev and for the edge proxy to hit via host IP
+      - "8000:8000"   # edge proxy -> host:8000 -> container:8000
     environment:
-      - DEBUG=1
+      - DEBUG=0
       - DB_NAME=bayleaf
       - DB_USER=bayleaf
       - DB_PASSWORD=bayleaf
       - DB_HOST=db
-      - DB_PORT="5432"
-      # Recommended for Django behind a proxy / on a domain:
-      - ALLOWED_HOSTS=localhost,127.0.0.1,nonnenmacher.tech,bayleaf.nonnenmacher.tech
-      - CSRF_TRUSTED_ORIGINS=http://nonnenmacher.tech,http://bayleaf.nonnenmacher.tech
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=localhost,127.0.0.1,nonnenmacher.tech,bayleaf.nonnenmacher.tech,api
+      # Use HTTPS origins in prod
+      - CSRF_TRUSTED_ORIGINS=https://nonnenmacher.tech,https://bayleaf.nonnenmacher.tech
+      # If your proxy sets X-Forwarded-Proto
+      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
     depends_on:
       db:
         condition: service_healthy
