@@ -1,6 +1,8 @@
 # Usar a imagem oficial do Python como base
 FROM python:3.10
 
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
 # Definir o diretório de trabalho

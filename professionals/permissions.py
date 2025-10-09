@@ -1,4 +1,6 @@
 from rest_framework import permissions
+
+from users.permissions import IsBayleafAPIToken
 from .models import Professional
 
 
@@ -15,3 +17,8 @@ class IsProfessional(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         """Ensure the user is a professional."""
         return Professional.objects.filter(id=request.user.id).exists()
+
+
+class IsAgentOrProfessional(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return IsBayleafAPIToken().has_permission(request, view) or IsProfessional().has_permission(request, view)

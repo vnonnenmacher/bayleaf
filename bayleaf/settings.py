@@ -267,3 +267,40 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+        },
+        "simple": {
+            "format": "%(levelname)s %(name)s: %(message)s"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,   # INFO by default (override via env)
+    },
+    "loggers": {
+        # Django internals
+        "django": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        "django.server": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        # Make sure 500s show up with tracebacks
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        # DRF logging can be chatty; tune as needed
+        "django.db.backends": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        # Your project/apps (optional examples)
+        "bayleaf": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        "careplans": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+    },
+}
