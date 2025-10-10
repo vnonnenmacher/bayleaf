@@ -1,16 +1,25 @@
 version: "3.9"
 
+networks:
+  bayleaf_net:
+    name: bayleaf_net
+
 x-api-base: &api-base
   build: .
   working_dir: /usr/src/app
   environment:
     # These are defaults; override via --env-file if you like
     DJANGO_SETTINGS_MODULE: "bayleaf.settings.prod"
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+    BAYLEAF_RSA_PRIVATE_KEY: ${BAYLEAF_RSA_PRIVATE_KEY}
+    BAYLEAF_RSA_PUBLIC_KEY: ${BAYLEAF_RSA_PUBLIC_KEY}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS}
     RUN_MODE: "prod"
     DB_HOST: "db"
     DB_NAME: "bayleaf"
     DB_USER: "bayleaf"
     DB_PASSWORD: "bayleaf"
+  networks: [bayleaf_net]
   depends_on:
     db:
       condition: service_healthy
@@ -43,6 +52,7 @@ services:
 
   db:
     image: postgres:16
+    networks: [bayleaf_net]
     environment:
       POSTGRES_USER: bayleaf
       POSTGRES_PASSWORD: bayleaf
