@@ -29,7 +29,7 @@ def list_from_env(name: str, default: str = ""):
 # ------------------------------------------------------------
 # Paths / core
 # ------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = env("DJANGO_SECRET_KEY", required=True)
 DEBUG = False
