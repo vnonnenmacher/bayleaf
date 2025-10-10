@@ -26,6 +26,6 @@ EXPOSE 8000
 
 # Defaults: prod mode; dev will override via compose profile
 ENV RUN_MODE=prod
-ENV DJANGO_SETTINGS_MODULE=config.settings.prod
+ENV DJANGO_SETTINGS_MODULE=bayleaf.settings.prod
 
 CMD ["/entrypoint.sh"]
