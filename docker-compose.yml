@@ -28,6 +28,10 @@ services:
   # --- Production app (uWSGI) ---
   api:
     <<: *api-base
+    environment:
+      CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-"0"}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
     profiles: ["prod"]
     ports:
       - "8000:8000"
