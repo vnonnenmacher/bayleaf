@@ -25,7 +25,7 @@ def env(name: str, default=None, required: bool = False):
 # ------------------------------------------------------------
 # Paths / core Django bits
 # ------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 SECRET_KEY = os.getenv(
