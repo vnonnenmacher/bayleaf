@@ -2,12 +2,47 @@
 from django.contrib import admin
 from django.utils import timezone
 
+from careplans.models import CarePlan
 from patients.models import Patient
 from users.admin import IdentifierInline
 
 # import medication + events models
 from medications.models import MedicationItem, TakeMedicationEvent
 from events.models import BaseEvent
+
+class CarePlanInline(admin.TabularInline):
+    """
+    Inline showing all care plans attached to a patient.
+    """
+    model = CarePlan
+    extra = 0
+    show_change_link = True  # allow going into the full careplan admin page
+    
+    fields = (
+        "template",
+        "status",
+        "start_date",
+        "end_date",
+        "owner",
+        "goal_count",
+        "action_count",
+    )
+    readonly_fields = (
+        "goal_count",
+        "action_count",
+    )
+
+    # Display associated goals count
+    def goal_count(self, obj):
+        return obj.goals.count()
+
+    goal_count.short_description = "Goals"
+
+    # Display associated actions count
+    def action_count(self, obj):
+        return obj.actions.count()
+
+    action_count.short_description = "Actions"
 
 
 class MedicationItemInline(admin.TabularInline):
@@ -83,7 +118,7 @@ class MedicationItemInline(admin.TabularInline):
 class PatientAdmin(admin.ModelAdmin):
     list_display = ["first_name", "last_name", "email", "birth_date"]
     search_fields = ["first_name", "last_name", "email"]
-    inlines = [IdentifierInline, MedicationItemInline]
+    inlines = [IdentifierInline, MedicationItemInline, CarePlanInline]
     autocomplete_fields = ["address1", "address2", "primary_contact", "secondary_contact"]
 
     fieldsets = (
