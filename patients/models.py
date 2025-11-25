@@ -35,7 +35,7 @@ class Relative(User, Person):
 
     def __str__(self):
         # fall back to email or a readable name
-        return self.get_full_name() or self.email or f"Relative #{self.pk}"
+        return self.first_name or self.email or f"Relative #{self.pk}"
 
 
 class PatientRelationship(models.Model):

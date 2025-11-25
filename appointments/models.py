@@ -20,7 +20,7 @@ class Appointment(ScheduledTimedEvent):
         verbose_name_plural = "Appointments"
 
     def __str__(self):
-        return f"Appointment with Dr. {self.doctor.email} for {self.patient.email} on {self.scheduled_to}"
+        return f"Appointment with Dr. {self.professional.email} for {self.patient.email} on {self.scheduled_to}"
 
     def save(self, *args, **kwargs):
         """Ensure event_type is always 'appointment'."""
