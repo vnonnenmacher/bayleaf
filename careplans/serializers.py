@@ -5,7 +5,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from professionals.models import Professional
-
+from careplans.services.event_generator import generate_events_for_action
 
 from .models import (
     CarePlanTemplate, GoalTemplate, ActionTemplate,
@@ -86,6 +86,7 @@ class CarePlanActionSerializer(serializers.ModelSerializer):
             "category", "title",
             "status", "cancel_reason", "completed_at",
             "custom_instructions_richtext",
+            "schedule_json",
             "assigned_to",
             "extras",
             "medication_detail", "appointment_detail",
@@ -230,6 +231,7 @@ class CarePlanActionInlineSerializer(serializers.ModelSerializer):
             "title",
             "status",
             "cancel_reason",
+            "schedule_json",
             "completed_at",
             "custom_instructions_richtext",
             "assigned_to",
@@ -313,7 +315,7 @@ class CarePlanUpsertSerializer(CarePlanSerializer):
         goals_data = validated_data.pop("goals", [])
         actions_data = validated_data.pop("actions", [])
 
-        # -------- default owner = requesting Professional (if not provided) --------
+        # -------- default owner = requesting Professional --------
         request = self.context.get("request")
         if not validated_data.get("owner") and request and request.user and request.user.is_authenticated:
             pro = Professional.objects.filter(user_ptr_id=request.user.id).first()
@@ -323,23 +325,53 @@ class CarePlanUpsertSerializer(CarePlanSerializer):
         # create plan
         plan = CarePlan.objects.create(**validated_data)
 
-        # create goals (attach plan automatically)
+        # create goals
         for g in goals_data:
             CarePlanGoal.objects.create(careplan=plan, **g)
 
-        # create actions + per-category details
+        # create actions
         for a in actions_data:
             med = a.pop("medication_detail", None)
             appt = a.pop("appointment_detail", None)
 
-            action = CarePlanAction.objects.create(careplan=plan, **a)
+            template = a.get("template")
+            incoming_schedule = a.pop("schedule_json", {}) or {}
 
+            # --- Step 1: Start with template schedule_json (if exists)
+            if template and template.schedule_json:
+                schedule_json = template.schedule_json.copy()
+            else:
+                schedule_json = {}
+
+            # --- Step 2: Merge medication detail as schedule defaults
+            if med:
+                # e.g. "frequency": "daily", "duration_days": 90
+                if med.get("frequency"):
+                    schedule_json["frequency"] = med["frequency"]
+                if med.get("duration_days"):
+                    schedule_json["duration_days"] = med["duration_days"]
+
+            # --- Step 3: Merge input schedule_json (if user provided)
+            schedule_json.update(incoming_schedule)
+
+            # Create the action with schedule_json populated
+            action = CarePlanAction.objects.create(
+                careplan=plan,
+                schedule_json=schedule_json,   # <-- Now persisted
+                **a
+            )
+
+            # Create details
             if med:
                 MedicationActionDetail.objects.create(action=action, **med)
             if appt:
                 AppointmentActionDetail.objects.create(action=action, **appt)
 
+            # --- Step 4: Generate events based on final schedule_json
+            generate_events_for_action(action)
+
         return plan
+
 
     @transaction.atomic
     def update(self, instance, validated_data):

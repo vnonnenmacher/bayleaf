@@ -183,3 +183,25 @@ class ScheduledTimedEvent(BaseEvent):
 
     def mark_completed(self, changed_by=None) -> None:
         self.update_status(BaseEvent.Status.COMPLETED, changed_by=changed_by)
+
+class ScheduledDueWindowEvent(BaseEvent):
+    """
+    An event that must be completed anytime between a start and end datetime.
+    Unlike ScheduledTimedEvent, it has no duration — only a completion window.
+    Example: take a medication anytime between 08:00–12:00.
+    """
+    due_from = models.DateTimeField(db_index=True, default=None)
+    due_until = models.DateTimeField(db_index=True, default=None)
+
+    class Meta:
+        abstract = True
+        ordering = ["due_from"]
+
+    def is_within_window(self) -> bool:
+        now = timezone.now()
+        return self.due_from <= now <= self.due_until
+
+    def mark_completed(self, changed_by=None):
+        if not self.is_within_window():
+            raise ValueError("Cannot complete outside due window.")
+        self.update_status(BaseEvent.Status.COMPLETED, changed_by=changed_by)

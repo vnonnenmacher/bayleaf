@@ -10,3 +10,4 @@ faker
 django-cors-headers
 uwsgi==2.0.23
 whitenoise==6.7.0
+python-dateutil

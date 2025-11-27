@@ -8,6 +8,10 @@ from professionals.models import Role, ServiceSlot, Shift, Professional, Special
 from core.serializers import AddressSerializer, ContactSerializer
 from core.models import Address, Contact, Service
 
+class SpecializationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Specialization
+        fields = ['id', 'name', 'description']
 
 class RoleSerializer(serializers.ModelSerializer):
 
@@ -23,7 +27,7 @@ class RoleSerializer(serializers.ModelSerializer):
 class ProfessionalListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Professional
-        fields = ["id", "did", "first_name", "last_name", "email", "avatar"]
+        fields = ["id", "did", "first_name", "last_name", "email", "avatar", "specializations"]
 
 
 class ProfessionalSerializer(serializers.ModelSerializer):
@@ -37,6 +41,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     role = RoleSerializer(required=False)
     role_id = serializers.IntegerField(required=False, write_only=True)
     avatar = serializers.ImageField(required=False, allow_null=True)
+    specializations = SpecializationSerializer(many=True, required=False)
 
     class Meta:
         model = Professional
@@ -55,7 +60,8 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             "role",
             "role_id",
             "bio",
-            "avatar"
+            "avatar",
+            "specializations",
         ]
         extra_kwargs = {"password": {"write_only": True},
                         "did": {"read_only": True}}
@@ -264,9 +270,3 @@ class ServiceSlotSerializer(serializers.ModelSerializer):
             "professional",
             "service",
         ]
-
-
-class SpecializationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Specialization
-        fields = ['id', 'name', 'description']

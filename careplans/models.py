@@ -11,7 +11,7 @@ from patients.models import Patient
 from professionals.models import Professional, Specialization
 from core.models import Service, TimeStampedModel
 from medications.models import MedicationItem  # or your concrete medication model
-from events.models import ScheduledTimedEvent  # base scheduled event in your project
+from events.models import ScheduledDueWindowEvent, ScheduledTimedEvent  # base scheduled event in your project
 
 
 # =========================
@@ -171,6 +171,8 @@ class CarePlanAction(TimeStampedModel):
         Professional, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_careplan_actions"
     )
 
+    schedule_json = models.JSONField(default=dict, blank=True)
+
     # A small flexible field for category-specific extras that don't justify a dedicated table yet
     extras = models.JSONField(default=dict, blank=True)
 
@@ -235,7 +237,7 @@ class AppointmentActionDetail(models.Model):
 # =========================
 # Scheduled occurrences (ties actions into your scheduling system)
 # =========================
-class CarePlanActivityEvent(ScheduledTimedEvent):
+class CarePlanActivityEvent(ScheduledDueWindowEvent):
     """
     A concrete scheduled occurrence derived from an action (e.g., a specific dose time,
     a booked appointment slot, a measurement reminder, etc.).

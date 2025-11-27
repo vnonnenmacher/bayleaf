@@ -133,18 +133,20 @@ class CarePlanActivityEventAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "action",
-        "scheduled_to",
+        "due_from",
+        "due_until",
         "end_time",
         "created_at",
         "status",
     ]
-    list_filter = ["scheduled_to", "action__category", "status"]
+    list_filter = ["due_from", "action__category", "status"]
     search_fields = ["action__title"]
 
     def end_time(self, obj):
-        return obj.get_end_time()
+        return obj.due_until
 
     end_time.short_description = "End"
+
 
 
 # ============================================================
