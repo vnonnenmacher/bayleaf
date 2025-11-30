@@ -40,16 +40,16 @@ class AvailableSlotsView(APIView):
             openapi.Parameter(
                 name="start_date",
                 in_=openapi.IN_QUERY,
-                description="Start date in YYYY-MM-DD format",
-                required=True,
+                description="Start date in YYYY-MM-DD format. Defaults to now when omitted.",
+                required=False,
                 type=openapi.TYPE_STRING,
                 format="date"
             ),
             openapi.Parameter(
                 name="end_date",
                 in_=openapi.IN_QUERY,
-                description="End date in YYYY-MM-DD format",
-                required=True,
+                description="End date in YYYY-MM-DD format. Defaults to 30 days from the start date when omitted.",
+                required=False,
                 type=openapi.TYPE_STRING,
                 format="date"
             ),
@@ -94,29 +94,45 @@ class AvailableSlotsView(APIView):
     )
     def get(self, request):
         service_ids = request.query_params.getlist("services", [])
-        start_date = request.query_params.get("start_date")
-        end_date = request.query_params.get("end_date")
+        start_param = request.query_params.get("start_date")
+        end_param = request.query_params.get("end_date")
 
-        if not service_ids or not start_date or not end_date:
-            return Response({"error": "Missing required parameters."}, status=status.HTTP_400_BAD_REQUEST)
+        if not service_ids:
+            return Response({"error": "Missing required services parameter."}, status=status.HTTP_400_BAD_REQUEST)
+
+        now_dt = timezone.now()
+        current_tz = timezone.get_current_timezone()
 
         try:
-            start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
-            end_date_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # inclusive
+            if start_param:
+                start_date = datetime.strptime(start_param, "%Y-%m-%d").date()
+                start_date_dt = timezone.make_aware(datetime.combine(start_date, time.min), current_tz)
+            else:
+                start_date_dt = now_dt
+
+            start_date_dt = max(start_date_dt, now_dt)
+
+            if end_param:
+                end_date = datetime.strptime(end_param, "%Y-%m-%d").date()
+                end_date_dt = timezone.make_aware(datetime.combine(end_date, time.max), current_tz)
+            else:
+                default_end_date = (start_date_dt + timedelta(days=30)).date()
+                end_date_dt = timezone.make_aware(datetime.combine(default_end_date, time.max), current_tz)
         except ValueError:
             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        now_dt = datetime.now()
-        if end_date_dt.date() < now_dt.date():
+        if end_date_dt < now_dt:
             return Response({"error": "End date cannot be in the past."}, status=status.HTTP_400_BAD_REQUEST)
-        if start_date_dt.date() < now_dt.date():
-            start_date_dt = now_dt
+
+        start_date_dt = max(start_date_dt, now_dt)
+        if end_date_dt < start_date_dt:
+            return Response({"error": "end_date must be on or after start_date."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Filter all slots within range and services
         service_slots = ServiceSlot.objects.filter(
             shift__service_id__in=service_ids,
             start_time__gte=start_date_dt,
-            start_time__lt=end_date_dt
+            start_time__lte=end_date_dt
         )
 
         # Exclude slots with active appointments (not canceled)
