@@ -1,12 +1,50 @@
 import uuid
 
-from rest_framework import viewsets, status
-
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from lab.serializers import SampleSerializer, SampleStateSerializer, SampleTypeSerializer
 from rest_framework.response import Response
-from lab.models import Sample, SampleState, SampleStateTransition, SampleType, AllowedStateTransition
+
+from lab.models import (
+    AllowedStateTransition,
+    Analyte,
+    AnalyteCode,
+    AnalyteResult,
+    Exam,
+    ExamField,
+    ExamFieldResult,
+    ExamRequest,
+    ExamVersion,
+    Equipment,
+    EquipmentGroup,
+    MeasurementUnit,
+    Sample,
+    SampleState,
+    SampleStateTransition,
+    SampleType,
+    Tag,
+)
+from lab.helpers.exam_request_helper import ExamRequestHelper
+from lab.serializers import (
+    AnalyteCodeSerializer,
+    AnalyteResultSerializer,
+    AnalyteSerializer,
+    ExamFieldResultSerializer,
+    ExamFieldSerializer,
+    ExamRequestCancelSerializer,
+    ExamRequestSerializer,
+    ExamSerializer,
+    ExamVersionSerializer,
+    EquipmentGroupSerializer,
+    EquipmentSerializer,
+    MeasurementUnitSerializer,
+    SampleSerializer,
+    SampleStateSerializer,
+    SampleTypeSerializer,
+    TagSerializer,
+)
+from professionals.models import Professional
+from professionals.permissions import IsProfessional
 
 
 class SampleViewSet(viewsets.ReadOnlyModelViewSet):
@@ -100,3 +138,94 @@ class SampleStateViewSet(viewsets.ModelViewSet):
     queryset = SampleState.objects.all()
     serializer_class = SampleStateSerializer
     permission_classes = [IsAuthenticated]
+
+
+class MeasurementUnitViewSet(viewsets.ModelViewSet):
+    queryset = MeasurementUnit.objects.all()
+    serializer_class = MeasurementUnitSerializer
+    permission_classes = [IsProfessional]
+
+
+class ExamViewSet(viewsets.ModelViewSet):
+    queryset = Exam.objects.all()
+    serializer_class = ExamSerializer
+    permission_classes = [IsProfessional]
+
+
+class ExamVersionViewSet(viewsets.ModelViewSet):
+    queryset = ExamVersion.objects.all()
+    serializer_class = ExamVersionSerializer
+    permission_classes = [IsProfessional]
+
+
+class ExamFieldViewSet(viewsets.ModelViewSet):
+    queryset = ExamField.objects.all()
+    serializer_class = ExamFieldSerializer
+    permission_classes = [IsProfessional]
+
+
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = [IsProfessional]
+
+
+class ExamRequestViewSet(viewsets.ModelViewSet):
+    queryset = ExamRequest.objects.select_related("patient", "requested_by").all()
+    serializer_class = ExamRequestSerializer
+    permission_classes = [IsProfessional]
+
+    @action(detail=True, methods=["post"], permission_classes=[IsProfessional])
+    def cancel(self, request, pk=None):
+        exam_request = self.get_object()
+        serializer = ExamRequestCancelSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        professional = Professional.objects.get(id=request.user.id)
+        helper = ExamRequestHelper()
+        try:
+            helper.cancel_exam_request(
+                exam_request=exam_request,
+                canceled_by=professional,
+                reason=serializer.validated_data.get("cancel_reason"),
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(ExamRequestSerializer(exam_request).data, status=status.HTTP_200_OK)
+
+
+class ExamFieldResultViewSet(viewsets.ModelViewSet):
+    queryset = ExamFieldResult.objects.all()
+    serializer_class = ExamFieldResultSerializer
+    permission_classes = [IsProfessional]
+
+
+class EquipmentGroupViewSet(viewsets.ModelViewSet):
+    queryset = EquipmentGroup.objects.all()
+    serializer_class = EquipmentGroupSerializer
+    permission_classes = [IsProfessional]
+
+
+class EquipmentViewSet(viewsets.ModelViewSet):
+    queryset = Equipment.objects.all()
+    serializer_class = EquipmentSerializer
+    permission_classes = [IsProfessional]
+
+
+class AnalyteViewSet(viewsets.ModelViewSet):
+    queryset = Analyte.objects.all()
+    serializer_class = AnalyteSerializer
+    permission_classes = [IsProfessional]
+
+
+class AnalyteCodeViewSet(viewsets.ModelViewSet):
+    queryset = AnalyteCode.objects.all()
+    serializer_class = AnalyteCodeSerializer
+    permission_classes = [IsProfessional]
+
+
+class AnalyteResultViewSet(viewsets.ModelViewSet):
+    queryset = AnalyteResult.objects.all()
+    serializer_class = AnalyteResultSerializer
+    permission_classes = [IsProfessional]

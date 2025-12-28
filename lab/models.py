@@ -1,8 +1,11 @@
-from django.db import models
-from django.contrib.auth import get_user_model
 import uuid
 
+from django.contrib.auth import get_user_model
+from django.db import models
+
+from core.models import Service, TimeStampedModel
 from patients.models import Patient
+from professionals.models import Professional
 
 
 class SampleState(models.Model):
@@ -47,6 +50,13 @@ class Sample(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="samples")
     sample_type = models.ForeignKey(SampleType, on_delete=models.CASCADE, related_name="samples")
+    exam_request = models.ForeignKey(
+        "ExamRequest",
+        on_delete=models.SET_NULL,
+        related_name="samples",
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return f"Sample {self.id} - {self.sample_type.name}"
@@ -82,3 +92,232 @@ class SampleStateTransition(models.Model):
 
     def __str__(self):
         return f"Sample {self.sample.id}: {self.previous_state} → {self.new_state} at {self.created_at}"
+
+
+class MeasurementUnit(models.Model):
+    """
+    Represents a unit of measurement for exam fields (e.g., mg/dL).
+    """
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=32, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.code
+
+
+class Exam(Service):
+    """
+    Represents a lab exam as a service (e.g., Glucose).
+    """
+    material = models.ForeignKey(SampleType, on_delete=models.PROTECT, related_name="exams")
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class ExamVersion(TimeStampedModel):
+    """
+    Versioned definition of an exam; only one version is active at a time.
+    """
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="versions")
+    version = models.PositiveIntegerField()
+    is_active = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("exam", "version")
+
+    def __str__(self):
+        return f"{self.exam.code} v{self.version}"
+
+
+class ExamField(TimeStampedModel):
+    """
+    Defines a field for an exam version (e.g., Result, Observation).
+    """
+
+    class FieldType(models.TextChoices):
+        NUMBER = "number", "Number"
+        TEXT = "text", "Text"
+        BOOLEAN = "boolean", "Boolean"
+        DATE = "date", "Date"
+        DATETIME = "datetime", "DateTime"
+        DECIMAL = "decimal", "Decimal"
+
+    exam_version = models.ForeignKey(ExamVersion, on_delete=models.CASCADE, related_name="fields")
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=64, blank=True, null=True)
+    priority = models.PositiveIntegerField(default=0)
+    field_type = models.CharField(max_length=20, choices=FieldType.choices, default=FieldType.TEXT)
+    measurement_unit = models.ForeignKey(
+        MeasurementUnit,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="exam_fields",
+    )
+    formula = models.JSONField(blank=True, null=True)
+    classification_rules = models.JSONField(blank=True, null=True)
+    is_required = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("exam_version", "code")
+
+    def __str__(self):
+        return f"{self.exam_version} - {self.name}"
+
+
+class Tag(TimeStampedModel):
+    """
+    Tag definition that can be attached to exam fields when formula evaluates to true.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    formula = models.JSONField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ExamFieldTag(models.Model):
+    exam_field = models.ForeignKey(ExamField, on_delete=models.CASCADE, related_name="tag_links")
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="field_links")
+
+    class Meta:
+        unique_together = ("exam_field", "tag")
+
+
+class ExamRequest(TimeStampedModel):
+    """
+    A request for a set of exams made by a professional.
+    """
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="exam_requests")
+    requested_by = models.ForeignKey(Professional, on_delete=models.PROTECT, related_name="exam_requests")
+    notes = models.TextField(blank=True, null=True)
+    canceled_at = models.DateTimeField(blank=True, null=True)
+    canceled_by = models.ForeignKey(
+        Professional,
+        on_delete=models.SET_NULL,
+        related_name="canceled_exam_requests",
+        blank=True,
+        null=True,
+    )
+    cancel_reason = models.CharField(max_length=255, blank=True, default="")
+
+    def __str__(self):
+        return f"Exam request {self.id} for {self.patient}"
+
+
+class RequestedExam(TimeStampedModel):
+    """
+    A requested exam within an exam request.
+    """
+    exam_request = models.ForeignKey(ExamRequest, on_delete=models.CASCADE, related_name="requested_exams")
+    exam_version = models.ForeignKey(ExamVersion, on_delete=models.PROTECT, related_name="requested_exams")
+    sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, related_name="requested_exams", null=True, blank=True)
+
+    class Meta:
+        unique_together = ("exam_request", "exam_version")
+
+    def __str__(self):
+        return f"{self.exam_request} - {self.exam_version}"
+
+
+class ExamFieldResult(TimeStampedModel):
+    """
+    Result for a specific exam field within a requested exam.
+    """
+
+    class Classification(models.TextChoices):
+        NORMAL = "normal", "Normal"
+        ABNORMAL = "abnormal", "Abnormal"
+        CRITICAL = "critical", "Critical"
+
+    requested_exam = models.ForeignKey(RequestedExam, on_delete=models.CASCADE, related_name="field_results")
+    exam_field = models.ForeignKey(ExamField, on_delete=models.PROTECT, related_name="field_results")
+    raw_value = models.TextField(blank=True, null=True)
+    computed_value = models.TextField(blank=True, null=True)
+    classification = models.CharField(
+        max_length=20,
+        choices=Classification.choices,
+        blank=True,
+        null=True,
+    )
+    classification_context = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("requested_exam", "exam_field")
+
+    def __str__(self):
+        return f"{self.requested_exam} - {self.exam_field.name}"
+
+
+class EquipmentGroup(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Equipment(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    group = models.ForeignKey(EquipmentGroup, on_delete=models.CASCADE, related_name="equipments")
+    manufacturer = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Analyte(models.Model):
+    """
+    Represents a measurable analyte from equipment (e.g., RBC).
+    """
+    name = models.CharField(max_length=100, unique=True)
+    group = models.ForeignKey(EquipmentGroup, on_delete=models.CASCADE, related_name="analytes")
+    default_code = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
+class AnalyteCode(models.Model):
+    """
+    Equipment-specific code for an analyte.
+    """
+    analyte = models.ForeignKey(Analyte, on_delete=models.CASCADE, related_name="codes")
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name="analyte_codes")
+    code = models.CharField(max_length=50)
+    is_default = models.BooleanField(default=False)
+    configuration = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("analyte", "equipment")
+
+    def __str__(self):
+        return f"{self.analyte.name} - {self.code} ({self.equipment.name})"
+
+
+class AnalyteResult(TimeStampedModel):
+    """
+    Result received from equipment for a sample/analyte.
+    """
+    analyte = models.ForeignKey(Analyte, on_delete=models.PROTECT, related_name="results")
+    equipment = models.ForeignKey(Equipment, on_delete=models.PROTECT, related_name="results")
+    sample = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="analyte_results")
+    requested_exam = models.ForeignKey(
+        RequestedExam,
+        on_delete=models.SET_NULL,
+        related_name="analyte_results",
+        null=True,
+        blank=True,
+    )
+    raw_value = models.TextField()
+    numeric_value = models.FloatField(blank=True, null=True)
+    units = models.ForeignKey(MeasurementUnit, on_delete=models.SET_NULL, null=True, blank=True)
+    metadata = models.JSONField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.analyte.name} result for {self.sample.id}"
