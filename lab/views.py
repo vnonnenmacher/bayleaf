@@ -174,6 +174,7 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
     queryset = ExamRequest.objects.select_related("patient", "requested_by").all()
     serializer_class = ExamRequestSerializer
     permission_classes = [IsProfessional]
+    http_method_names = ["get", "post", "patch", "put", "head", "options"]
 
     @action(detail=True, methods=["post"], permission_classes=[IsProfessional])
     def cancel(self, request, pk=None):

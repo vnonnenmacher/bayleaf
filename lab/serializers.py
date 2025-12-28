@@ -9,6 +9,7 @@ from lab.models import (
     Exam,
     ExamField,
     ExamFieldResult,
+    ExamFieldResultTag,
     ExamFieldTag,
     ExamRequest,
     ExamVersion,
@@ -299,6 +300,8 @@ class ExamRequestCancelSerializer(serializers.Serializer):
 
 
 class ExamFieldResultSerializer(serializers.ModelSerializer):
+    applied_tags = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = ExamFieldResult
         fields = [
@@ -309,10 +312,22 @@ class ExamFieldResultSerializer(serializers.ModelSerializer):
             "computed_value",
             "classification",
             "classification_context",
+            "applied_tags",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ("created_at", "updated_at")
+
+    def get_applied_tags(self, obj):
+        links = ExamFieldResultTag.objects.select_related("tag").filter(exam_field_result=obj)
+        return [
+            {
+                "id": link.tag.id,
+                "name": link.tag.name,
+                "rule_matched": link.rule_matched,
+            }
+            for link in links
+        ]
 
 
 class EquipmentGroupSerializer(serializers.ModelSerializer):

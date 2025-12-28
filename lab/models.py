@@ -254,6 +254,22 @@ class ExamFieldResult(TimeStampedModel):
         return f"{self.requested_exam} - {self.exam_field.name}"
 
 
+class ExamFieldResultTag(models.Model):
+    exam_field_result = models.ForeignKey(
+        ExamFieldResult,
+        on_delete=models.CASCADE,
+        related_name="applied_tags",
+    )
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="result_links")
+    rule_matched = models.JSONField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ("exam_field_result", "tag")
+
+    def __str__(self):
+        return f"{self.exam_field_result} - {self.tag.name}"
+
+
 class EquipmentGroup(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
