@@ -24,6 +24,7 @@ from lab.models import (
     SampleType,
     Tag,
 )
+from lab.exam_processing.injector import AnalyteResultInjector
 from lab.helpers.exam_request_helper import ExamRequestHelper
 from lab.serializers import (
     AnalyteCodeSerializer,
@@ -230,3 +231,30 @@ class AnalyteResultViewSet(viewsets.ModelViewSet):
     queryset = AnalyteResult.objects.all()
     serializer_class = AnalyteResultSerializer
     permission_classes = [IsProfessional]
+
+    @action(detail=False, methods=["post"], permission_classes=[IsProfessional])
+    def inject(self, request):
+        equipment_code = request.data.get("equipment_code")
+        analyte_code = request.data.get("analyte_code")
+        raw_result = request.data.get("raw_result")
+        sample_id = request.data.get("sample_id")
+        numeric_value = request.data.get("numeric_value")
+        units_code = request.data.get("units_code")
+        metadata = request.data.get("metadata")
+
+        injector = AnalyteResultInjector()
+        try:
+            analyte_result = injector.inject(
+                equipment_code=equipment_code,
+                analyte_code=analyte_code,
+                raw_result=raw_result,
+                sample_id=sample_id,
+                numeric_value=numeric_value,
+                units_code=units_code,
+                metadata=metadata,
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = AnalyteResultSerializer(analyte_result)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

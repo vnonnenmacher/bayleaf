@@ -1,10 +1,27 @@
 import csv
 import json
+import re
+from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from lab.models import Exam, ExamField, ExamFieldTag, ExamVersion, MeasurementUnit, SampleType, Tag
+from lab.models import (
+    Analyte,
+    AnalyteCode,
+    Equipment,
+    EquipmentGroup,
+    Exam,
+    ExamField,
+    ExamFieldTag,
+    ExamVersion,
+    MeasurementUnit,
+    SampleType,
+    Tag,
+)
+
+_ANALYTE_REF_RE = re.compile(r"analyte_code_result\(([^)]+)\)")
+_CATALOG_CACHE = None
 
 
 def _parse_bool(value, default=False):
@@ -35,6 +52,104 @@ def _parse_json(value):
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON: {exc}") from exc
+
+
+def _resolve_formula_refs(formula):
+    if not formula or not isinstance(formula, list):
+        return formula
+    for rule in formula:
+        if not isinstance(rule, dict):
+            continue
+        for key in ("condition", "result"):
+            expr = rule.get(key)
+            if not isinstance(expr, str):
+                continue
+            rule[key] = _resolve_analyte_refs(expr)
+    return formula
+
+
+def _resolve_analyte_refs(expression: str) -> str:
+    def replace(match: re.Match) -> str:
+        token = match.group(1).strip()
+        if token.isdigit():
+            return f"analyte_code_result({token})"
+        code = token.strip("'\"")
+        analyte_code = AnalyteCode.objects.filter(code=code).first()
+        if analyte_code is None:
+            analyte = Analyte.objects.filter(default_code=code).first()
+            if analyte is not None:
+                analyte_code = AnalyteCode.objects.filter(analyte=analyte).order_by("id").first()
+                if analyte_code is None:
+                    equipment = Equipment.objects.filter(group=analyte.group).order_by("id").first()
+                    if equipment is None:
+                        raise ValueError(f"No equipment found for analyte '{code}'.")
+                    analyte_code, _ = AnalyteCode.objects.get_or_create(
+                        analyte=analyte,
+                        equipment=equipment,
+                        defaults={"code": analyte.default_code, "is_default": True},
+                    )
+            else:
+                analyte = _ensure_analyte_from_catalog(code)
+                if analyte is not None:
+                    equipment = Equipment.objects.filter(group=analyte.group).order_by("id").first()
+                    if equipment is None:
+                        raise ValueError(f"No equipment found for analyte '{code}'.")
+                    analyte_code, _ = AnalyteCode.objects.get_or_create(
+                        analyte=analyte,
+                        equipment=equipment,
+                        defaults={"code": analyte.default_code, "is_default": True},
+                    )
+        if analyte_code is None:
+            raise ValueError(f"Unknown analyte code reference '{code}'.")
+        return f"analyte_code_result({analyte_code.id})"
+
+    return _ANALYTE_REF_RE.sub(replace, expression)
+
+
+def _ensure_analyte_from_catalog(code: str) -> Analyte | None:
+    catalog = _load_catalog()
+    analyte_info = catalog.get(code)
+    if analyte_info is None:
+        return None
+    group_name = analyte_info["group"]
+    name = analyte_info["name"]
+    group, _ = EquipmentGroup.objects.get_or_create(name=group_name)
+    analyte, _ = Analyte.objects.get_or_create(
+        name=name,
+        defaults={"group": group, "default_code": code},
+    )
+    if analyte.default_code != code or analyte.group_id != group.id:
+        analyte.default_code = code
+        analyte.group = group
+        analyte.save(update_fields=["default_code", "group"])
+    return analyte
+
+
+def _load_catalog() -> dict:
+    global _CATALOG_CACHE
+    if _CATALOG_CACHE is not None:
+        return _CATALOG_CACHE
+    catalog_path = Path(__file__).resolve().parent / "data" / "equipment_catalog.json"
+    try:
+        with catalog_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except FileNotFoundError:
+        _CATALOG_CACHE = {}
+        return _CATALOG_CACHE
+    except json.JSONDecodeError:
+        _CATALOG_CACHE = {}
+        return _CATALOG_CACHE
+
+    mapping = {}
+    for group in data.get("groups", []) or []:
+        group_name = group.get("name")
+        for analyte in group.get("analytes", []) or []:
+            code = analyte.get("code")
+            name = analyte.get("name")
+            if code and name and group_name:
+                mapping[code] = {"name": name, "group": group_name}
+    _CATALOG_CACHE = mapping
+    return _CATALOG_CACHE
 
 
 class Command(BaseCommand):
@@ -138,6 +253,7 @@ class Command(BaseCommand):
         measurement_unit_code = str(row.get("field_measurement_unit_code", "")).strip()
         measurement_unit_name = str(row.get("field_measurement_unit_name", "")).strip()
         field_formula = _parse_json(row.get("field_formula"))
+        field_formula = _resolve_formula_refs(field_formula)
         field_classification_rules = _parse_json(row.get("field_classification_rules"))
 
         if not field_name:
