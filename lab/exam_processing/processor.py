@@ -332,16 +332,13 @@ class ExamProcessor:
         analyte_code = AnalyteCode.objects.filter(id=analyte_code_id).first()
         if analyte_code is None:
             return _MISSING
-        analyte_result = requested_exam.analyte_results.filter(
+        if not requested_exam.sample_id:
+            return _MISSING
+        analyte_result = AnalyteResult.objects.filter(
+            sample_id=requested_exam.sample_id,
             analyte=analyte_code.analyte,
             equipment=analyte_code.equipment,
-        ).first()
-        if analyte_result is None and requested_exam.sample_id:
-            analyte_result = AnalyteResult.objects.filter(
-                sample_id=requested_exam.sample_id,
-                analyte=analyte_code.analyte,
-                equipment=analyte_code.equipment,
-            ).first()
+        ).order_by("id").first()
 
         if field == "exists":
             return analyte_result is not None

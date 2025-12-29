@@ -279,6 +279,7 @@ class EquipmentGroup(models.Model):
 
 
 class Equipment(models.Model):
+    code = models.CharField(max_length=50, unique=True, blank=True, null=True)
     name = models.CharField(max_length=100, unique=True)
     group = models.ForeignKey(EquipmentGroup, on_delete=models.CASCADE, related_name="equipments")
     manufacturer = models.CharField(max_length=100, blank=True, null=True)
