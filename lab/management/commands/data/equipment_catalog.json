@@ -1,0 +1,144 @@
+{
+  "groups": [
+    {
+      "name": "Immunology",
+      "equipments": [
+        {"code": "IMM_COBAS_E_411", "name": "Cobas e 411", "manufacturer": "Roche Diagnostics"},
+        {"code": "IMM_COBAS_E_601_E_801", "name": "Cobas e 601 / e 801", "manufacturer": "Roche Diagnostics"},
+        {"code": "IMM_ARCHITECT_I2000SR", "name": "Architect i2000SR", "manufacturer": "Abbott Diagnostics"},
+        {"code": "IMM_ALINITY_I", "name": "Alinity i", "manufacturer": "Abbott Diagnostics"},
+        {"code": "IMM_ADVIA_CENTAUR_XP_XPT", "name": "ADVIA Centaur XP / XPT", "manufacturer": "Siemens Healthineers"},
+        {"code": "IMM_ACCESS_2", "name": "Access 2 Immunoassay System", "manufacturer": "Beckman Coulter"},
+        {"code": "IMM_VIDAS_3", "name": "VIDAS 3", "manufacturer": "bioMerieux"},
+        {"code": "IMM_IMMULITE_2000_XPI", "name": "Immulite 2000 XPi", "manufacturer": "Siemens Healthineers"}
+      ],
+      "analytes": [
+        {"code": "IMM_CRP", "name": "C-Reactive Protein"},
+        {"code": "IMM_PCT", "name": "Procalcitonin"},
+        {"code": "IMM_TSH", "name": "Thyroid Stimulating Hormone"},
+        {"code": "IMM_FT4", "name": "Free Thyroxine"},
+        {"code": "IMM_FT3", "name": "Free Triiodothyronine"},
+        {"code": "IMM_BHCG", "name": "Beta hCG"},
+        {"code": "IMM_TROP_I", "name": "Troponin I"},
+        {"code": "IMM_TROP_T", "name": "Troponin T"},
+        {"code": "IMM_FERR", "name": "Ferritin"},
+        {"code": "IMM_VITD25", "name": "Vitamin D (25-OH)"},
+        {"code": "IMM_B12", "name": "Vitamin B12"},
+        {"code": "IMM_FOL", "name": "Folate"},
+        {"code": "IMM_PSA_T", "name": "Total PSA"},
+        {"code": "IMM_PSA_F", "name": "Free PSA"},
+        {"code": "IMM_HBA1C_IMM", "name": "HbA1c (immunoassay)"},
+        {"code": "IMM_IGE_T", "name": "Total IgE"},
+        {"code": "IMM_IGE_S", "name": "Specific IgE"},
+        {"code": "IMM_CORT", "name": "Cortisol"},
+        {"code": "IMM_PROG", "name": "Progesterone"}
+      ]
+    },
+    {
+      "name": "Bioquimic",
+      "equipments": [
+        {"code": "BIO_COBAS_C_311_501_701", "name": "Cobas c 311 / c 501 / c 701", "manufacturer": "Roche Diagnostics"},
+        {"code": "BIO_ARCHITECT_C4000_C8000", "name": "Architect c4000 / c8000", "manufacturer": "Abbott Diagnostics"},
+        {"code": "BIO_ALINITY_C", "name": "Alinity c", "manufacturer": "Abbott Diagnostics"},
+        {"code": "BIO_AU_480_680_5800", "name": "AU480 / AU680 / AU5800", "manufacturer": "Beckman Coulter"},
+        {"code": "BIO_ATELLICA_CH_930", "name": "Atellica CH 930", "manufacturer": "Siemens Healthineers"},
+        {"code": "BIO_BS_200_240_800", "name": "BS-200 / BS-240 / BS-800", "manufacturer": "Mindray"},
+        {"code": "BIO_RESPONS_920", "name": "Respons 920", "manufacturer": "DiaSys"},
+        {"code": "BIO_ISTAT_ALINITY", "name": "i-STAT Alinity", "manufacturer": "Abbott Diagnostics"},
+        {"code": "BIO_COBAS_B_123", "name": "Cobas b 123", "manufacturer": "Roche Diagnostics"},
+        {"code": "BIO_ABL800_FLEX", "name": "Radiometer ABL800 FLEX", "manufacturer": "Radiometer"}
+      ],
+      "analytes": [
+        {"code": "BIO_GLU", "name": "Glucose"},
+        {"code": "BIO_UREA", "name": "Urea"},
+        {"code": "BIO_CREAT", "name": "Creatinine"},
+        {"code": "BIO_URIC", "name": "Uric Acid"},
+        {"code": "BIO_AST", "name": "AST (TGO)"},
+        {"code": "BIO_ALT", "name": "ALT (TGP)"},
+        {"code": "BIO_ALP", "name": "Alkaline Phosphatase"},
+        {"code": "BIO_GGT", "name": "Gamma-GT"},
+        {"code": "BIO_BILI_T", "name": "Total Bilirubin"},
+        {"code": "BIO_BILI_D", "name": "Direct Bilirubin"},
+        {"code": "BIO_ALB", "name": "Albumin"},
+        {"code": "BIO_PROT_T", "name": "Total Protein"},
+        {"code": "BIO_CHOL_T", "name": "Total Cholesterol"},
+        {"code": "BIO_TRIG", "name": "Triglycerides"},
+        {"code": "BIO_CALC_T", "name": "Total Calcium"},
+        {"code": "BIO_NA", "name": "Sodium"},
+        {"code": "BIO_K", "name": "Potassium"},
+        {"code": "BIO_CL", "name": "Chloride"},
+        {"code": "BIO_LACT", "name": "Lactate"}
+      ]
+    },
+    {
+      "name": "Hematology",
+      "equipments": [
+        {"code": "HEM_SYSMEX_XN_1000_2000", "name": "Sysmex XN-1000 / XN-2000", "manufacturer": "Sysmex"},
+        {"code": "HEM_SYSMEX_XN_3000", "name": "Sysmex XN-3000", "manufacturer": "Sysmex"},
+        {"code": "HEM_DXH_800_900", "name": "Beckman Coulter DxH 800 / DxH 900", "manufacturer": "Beckman Coulter"},
+        {"code": "HEM_ADVIA_2120I", "name": "ADVIA 2120i", "manufacturer": "Siemens Healthineers"},
+        {"code": "HEM_MINDRAY_BC_6800_7200", "name": "Mindray BC-6800 / BC-7200", "manufacturer": "Mindray"}
+      ],
+      "analytes": [
+        {"code": "HEM_WBC", "name": "White Blood Cells"},
+        {"code": "HEM_RBC", "name": "Red Blood Cells"},
+        {"code": "HEM_HGB", "name": "Hemoglobin"},
+        {"code": "HEM_HCT", "name": "Hematocrit"},
+        {"code": "HEM_MCV", "name": "Mean Corpuscular Volume"},
+        {"code": "HEM_MCH", "name": "Mean Corpuscular Hemoglobin"},
+        {"code": "HEM_MCHC", "name": "Mean Corpuscular Hgb Concentration"},
+        {"code": "HEM_RDW", "name": "Red Cell Distribution Width"},
+        {"code": "HEM_PLT", "name": "Platelet Count"},
+        {"code": "HEM_NEUT_P", "name": "Neutrophils %"},
+        {"code": "HEM_LYMP_P", "name": "Lymphocytes %"},
+        {"code": "HEM_MONO_P", "name": "Monocytes %"},
+        {"code": "HEM_EOS_P", "name": "Eosinophils %"},
+        {"code": "HEM_BASO_P", "name": "Basophils %"},
+        {"code": "HEM_RET", "name": "Reticulocytes"}
+      ]
+    },
+    {
+      "name": "Coagulation",
+      "equipments": [
+        {"code": "COAG_SYSMEX_CS_2500_5100", "name": "Sysmex CS-2500 / CS-5100", "manufacturer": "Sysmex"},
+        {"code": "COAG_ACL_TOP_350_550_750", "name": "ACL TOP 350 / 550 / 750", "manufacturer": "Werfen"},
+        {"code": "COAG_STA_COMPACT_MAX_STA_R_MAX", "name": "STA Compact Max / STA-R Max", "manufacturer": "Stago"}
+      ],
+      "analytes": [
+        {"code": "HEM_PT", "name": "Prothrombin Time"},
+        {"code": "HEM_INR", "name": "INR"},
+        {"code": "HEM_APTT", "name": "Activated Partial Thromboplastin Time"},
+        {"code": "HEM_FIBR", "name": "Fibrinogen"}
+      ]
+    },
+    {
+      "name": "Urinalisys",
+      "equipments": [
+        {"code": "URI_SYSMEX_UC_3500", "name": "Sysmex UC-3500", "manufacturer": "Sysmex"},
+        {"code": "URI_COBAS_U_411", "name": "Cobas u 411", "manufacturer": "Roche Diagnostics"},
+        {"code": "URI_IRIS_IQ200", "name": "Iris iQ200", "manufacturer": "Beckman Coulter"},
+        {"code": "URI_MINDRAY_UA_580_600", "name": "Mindray UA-580 / UA-600", "manufacturer": "Mindray"}
+      ],
+      "analytes": [
+        {"code": "URI_PH", "name": "Urine pH"},
+        {"code": "URI_SG", "name": "Specific Gravity"},
+        {"code": "URI_GLU", "name": "Glucose"},
+        {"code": "URI_PROT", "name": "Protein"},
+        {"code": "URI_KET", "name": "Ketones"},
+        {"code": "URI_BILI", "name": "Bilirubin"},
+        {"code": "URI_UROB", "name": "Urobilinogen"},
+        {"code": "URI_NIT", "name": "Nitrite"},
+        {"code": "URI_LEU", "name": "Leukocytes"},
+        {"code": "URI_RBC", "name": "Red Blood Cells"},
+        {"code": "URI_WBC", "name": "White Blood Cells"},
+        {"code": "URI_CASTS", "name": "Casts"},
+        {"code": "URI_CRYST", "name": "Crystals"},
+        {"code": "URI_BACT", "name": "Bacteria"},
+        {"code": "URI_EPI", "name": "Epithelial Cells"},
+        {"code": "URI_MICROALB", "name": "Microalbumin"},
+        {"code": "URI_CREAT", "name": "Urine Creatinine"},
+        {"code": "URI_ACR", "name": "Albumin/Creatinine Ratio"}
+      ]
+    }
+  ]
+}

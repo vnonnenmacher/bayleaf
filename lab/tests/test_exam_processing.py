@@ -95,7 +95,6 @@ def test_processor_creates_result_from_analyte(
         analyte=analyte,
         equipment=equipment,
         sample=requested_exam.sample,
-        requested_exam=requested_exam,
         raw_value="5.5",
         numeric_value=5.5,
         units=measurement_unit,
@@ -155,7 +154,6 @@ def test_processor_orders_field_dependencies(
         analyte=analyte,
         equipment=equipment,
         sample=requested_exam.sample,
-        requested_exam=requested_exam,
         raw_value="2",
         numeric_value=2,
     )
