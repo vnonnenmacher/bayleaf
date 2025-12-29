@@ -14,6 +14,24 @@ Bayleaf is a modular, scalable backend platform for healthcare applications, bui
 
 ---
 
+## Apps
+
+Bayleaf is organized as Django apps with clear ownership boundaries:
+
+- **appointments:** booked visits between professionals and patients; ties together services, slots, and scheduled event timing.
+- **careplans:** care plan templates and patient-specific plans with goals and scheduled actions (medications, appointments, tasks).
+- **core:** shared primitives like services, addresses, contacts, dosage units, and a lightweight timestamp mixin.
+- **events:** base event lifecycle, status transitions, scheduling helpers, and audit history used across time-based features.
+- **lab:** lab catalog (exams, versions, fields, tags), exam requests, and sample tracking with state transitions.
+- **medications:** medication catalog, prescriptions and items, and scheduled "take medication" events.
+- **patients:** patient records plus caregiver/relative relationships.
+- **prescriptions:** abstract prescription and item models used by medications and other clinical modules.
+- **professionals:** clinician profiles, roles, specializations, shifts, and service slots.
+- **timeline:** API layer for assembling patient timelines from appointments and other events.
+- **users:** custom auth user model, person profile fields, and identifiers.
+
+---
+
 ## 🛡 Compliance
 
 Bayleaf is designed with regulatory compliance in mind:
@@ -25,22 +43,30 @@ Bayleaf is designed with regulatory compliance in mind:
 
 ## 🧪 Local Development
 
+Bayleaf runs with Docker Compose profiles.
+
 ```bash
-# Clone the repo
-$ git clone https://github.com/your-org/bayleaf-backend.git
-$ cd bayleaf-backend
-
-# Set up virtualenv
-$ python -m venv env
-$ source env/bin/activate
-
-# Install dependencies
-$ pip install -r requirements.txt
-
-# Run migrations and start the server
-$ python manage.py migrate
-$ python manage.py runserver
+# Start local stack (dev profile)
+$ docker compose --profile dev up --force-recreate
 ```
+
+## 🚀 Production
+
+Create a production env file and run the prod profile:
+
+```bash
+# Copy and fill environment variables
+$ cp .env.prod.example .env.prod
+
+# Build and start production stack
+$ docker compose --profile prod --env-file .env.prod up --build --force-recreate -d
+```
+
+### Production setup checklist
+
+- Set `DJANGO_SECRET_KEY` and any database/redis credentials in `.env.prod`.
+- Configure `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`.
+- Ensure volumes/paths in `docker-compose.yml` are correct for the host.
 
 ---
 
