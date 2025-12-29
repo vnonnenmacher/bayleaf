@@ -44,6 +44,31 @@ $ python manage.py runserver
 
 ---
 
+## ✅ Tests (pytest)
+
+```bash
+# Run only lab tests
+$ pytest lab/tests
+```
+
+Pytest uses `bayleaf.settings.dev` by default (see `pytest.ini`). Override if needed:
+
+```bash
+$ DJANGO_SETTINGS_MODULE=bayleaf.settings.dev pytest lab/tests
+```
+
+### Writing tests (pytest)
+
+Guidelines for adding new tests:
+
+- Prefer fixtures over mocks to create real data (e.g., model instances) and keep tests readable.
+- Use mocks only when asserting that a collaborator was called with specific parameters.
+- Keep tests close to the app under `app_name/tests/` and follow the `test_*.py` pattern.
+- Use `pytest.mark.django_db` for tests that touch the database.
+- Keep tests focused on one behavior, and name them to describe intent.
+
+---
+
 ## 📚 API Documentation
 
 The API is versioned and RESTful.

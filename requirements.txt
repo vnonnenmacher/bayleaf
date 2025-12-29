@@ -8,6 +8,8 @@ django-filter
 drf-yasg
 faker
 django-cors-headers
+pytest
+pytest-django
 uwsgi==2.0.23
 whitenoise==6.7.0
 python-dateutil
