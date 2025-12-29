@@ -73,6 +73,7 @@ class ExamProcessor:
                 exam_field=exam_field,
                 defaults={"computed_value": computed_str},
             )
+        self._update_exam_completion(requested_exam, exam_fields)
 
     def _topo_sort_exam_fields(self, exam_fields_list: list[ExamField]) -> list[ExamField] | None:
         field_map = {field.id: field for field in exam_fields_list}
@@ -98,6 +99,27 @@ class ExamProcessor:
         if len(ordered) != len(exam_fields_list):
             return None
         return ordered
+
+    def _update_exam_completion(
+        self,
+        requested_exam: RequestedExam,
+        exam_fields_list: list[ExamField],
+    ) -> None:
+        pending = False
+        for exam_field in exam_fields_list:
+            if not exam_field.formula:
+                continue
+            if not ExamFieldResult.objects.filter(
+                requested_exam=requested_exam,
+                exam_field=exam_field,
+            ).exists():
+                pending = True
+                break
+        is_completed = not pending
+        if requested_exam.is_completed == is_completed:
+            return
+        requested_exam.is_completed = is_completed
+        requested_exam.save(update_fields=["is_completed"])
 
     def _extract_exam_field_dependencies(self, formula) -> set[int]:
         if not formula or not isinstance(formula, list):

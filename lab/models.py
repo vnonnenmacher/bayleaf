@@ -217,6 +217,7 @@ class RequestedExam(TimeStampedModel):
     exam_request = models.ForeignKey(ExamRequest, on_delete=models.CASCADE, related_name="requested_exams")
     exam_version = models.ForeignKey(ExamVersion, on_delete=models.PROTECT, related_name="requested_exams")
     sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, related_name="requested_exams", null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("exam_request", "exam_version")

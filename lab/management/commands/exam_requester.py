@@ -107,7 +107,10 @@ class Command(BaseCommand):
             self.stdout.write("No requests created this iteration.")
 
     def _maybe_cancel_requests(self, helper: ExamRequestHelper) -> None:
-        active_requests = ExamRequest.objects.filter(canceled_at__isnull=True).select_related("requested_by")
+        active_requests = ExamRequest.objects.filter(
+            canceled_at__isnull=True,
+            requested_exams__is_completed=False,
+        ).distinct().select_related("requested_by")
         canceled_count = 0
 
         for exam_request in active_requests:
