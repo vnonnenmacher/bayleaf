@@ -1,0 +1,6 @@
+[
+  {
+    "condition": "analyte_code_result(1).numeric_value >",
+    "result": "\"Oops\""
+  }
+]

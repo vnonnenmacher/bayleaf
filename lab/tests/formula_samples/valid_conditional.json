@@ -1,0 +1,10 @@
+[
+  {
+    "condition": "analyte_code_result(1).numeric_value > 1 and analyte_code_result(2).exists",
+    "result": "\"Positive\""
+  },
+  {
+    "condition": "",
+    "result": "(exam_field_result(135).numeric_value * 10) + 2"
+  }
+]
