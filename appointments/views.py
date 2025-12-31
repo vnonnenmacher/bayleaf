@@ -454,10 +454,16 @@ class AppointmentActionViewSet(viewsets.GenericViewSet):
         return self.get_queryset().filter(id=self.kwargs["pk"]).first()
 
     def is_doctor(self, user, appointment):
-        return Professional.objects.filter(user_ptr_id=user.id, id=appointment.professional_id).exists()
+        if not user:
+            return False
+        professional = appointment.professional
+        return user.id in {professional.user_ptr_id, professional.id}
 
     def is_patient(self, user, appointment):
-        return Patient.objects.filter(user_ptr_id=user.id, pid=appointment.patient_id).exists()
+        if not user:
+            return False
+        patient = appointment.patient
+        return user.id in {patient.user_ptr_id, patient.pid}
 
     def perform_status_transition(self, request, pk, new_status, allowed_roles):
         appointment = self.get_object()
