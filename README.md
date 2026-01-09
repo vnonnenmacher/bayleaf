@@ -1,6 +1,6 @@
 # 🌿 Bayleaf - Open HealthTech API
 
-Bayleaf is a modular, scalable backend platform for healthcare applications, built with Django and Django REST Framework. It serves as the foundation for white-label apps that manage doctors, patients, appointments, medications, and more.
+Bayleaf is a modular, scalable backend platform for healthcare applications, built with Django and Django REST Framework. It serves as the foundation for white-label apps that manage doctors, patients, lab exams, care plans, appointments, medications, and more.
 
 ---
 
