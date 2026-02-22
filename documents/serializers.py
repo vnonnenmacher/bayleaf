@@ -51,22 +51,19 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "family",
+            "version_label",
+            "status",
+            "effective_from",
+            "effective_to",
+            "storage_provider",
+            "bucket",
+            "object_key",
+            "content_type",
             "size_bytes",
             "content_hash",
             "created_by",
             "created_at",
         ]
-
-    def validate(self, attrs):
-        if self.instance is None:
-            request = self.context.get("request")
-            has_uploaded_file = bool(request and getattr(request, "FILES", None) and request.FILES.get("file"))
-            if not has_uploaded_file:
-                bucket = attrs.get("bucket")
-                object_key = attrs.get("object_key")
-                if not bucket or not object_key:
-                    raise serializers.ValidationError("'bucket' and 'object_key' are required when creating a version.")
-        return attrs
 
 
 class DocumentVersionUploadSerializer(serializers.Serializer):

@@ -13,7 +13,6 @@ from documents.serializers import (
 )
 from documents.services import publish_version
 from documents.storage import get_documents_storage_client
-from professionals.models import Professional
 from professionals.permissions import IsAgentOrProfessional
 
 
@@ -56,41 +55,12 @@ class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAgentOrProfessional]
 
 
-class DocumentVersionListCreateView(generics.ListCreateAPIView):
+class DocumentVersionListView(generics.ListAPIView):
     serializer_class = DocumentVersionSerializer
     permission_classes = [IsAgentOrProfessional]
 
     def get_queryset(self):
         return DocumentVersion.objects.filter(family_id=self.kwargs["family_id"]).order_by("-created_at")
-
-    def get_serializer_class(self):
-        if self.request.method == "POST" and self.request.FILES.get("file"):
-            return DocumentVersionUploadSerializer
-        return DocumentVersionSerializer
-
-    def perform_create(self, serializer):
-        family = generics.get_object_or_404(DocumentFamily, id=self.kwargs["family_id"])
-        professional = None
-        if self.request.user and self.request.user.is_authenticated:
-            professional = Professional.objects.filter(user_ptr_id=self.request.user.id).first()
-        serializer.save(
-            family=family,
-            created_by=professional,
-        )
-
-    def create(self, request, *args, **kwargs):
-        # Accept file uploads on both:
-        # - /api/documents/{family_id}/versions/
-        # - /api/documents/{family_id}/versions/upload/
-        if request.FILES.get("file"):
-            family = generics.get_object_or_404(DocumentFamily, id=self.kwargs["family_id"])
-            serializer = self.get_serializer(data=request.data, context={"request": request, "family": family})
-            serializer.is_valid(raise_exception=True)
-            version = serializer.save()
-            output = DocumentVersionSerializer(version, context={"request": request})
-            headers = self.get_success_headers(output.data)
-            return Response(output.data, status=status.HTTP_201_CREATED, headers=headers)
-        return super().create(request, *args, **kwargs)
 
 
 class DocumentVersionRetrieveView(generics.RetrieveAPIView):
