@@ -272,8 +272,8 @@ LOGGING = {
 # MinIO / document storage
 # ------------------------------------------------------------
 MINIO_ENDPOINT = env("MINIO_ENDPOINT", "minio:9000")
-MINIO_ACCESS_KEY = env("MINIO_ACCESS_KEY", required=True)
-MINIO_SECRET_KEY = env("MINIO_SECRET_KEY", required=True)
+MINIO_ACCESS_KEY = env("MINIO_ACCESS_KEY", env("MINIO_ROOT_USER", "minioadmin"))
+MINIO_SECRET_KEY = env("MINIO_SECRET_KEY", env("MINIO_ROOT_PASSWORD", "minioadmin"))
 MINIO_USE_SSL = env("MINIO_USE_SSL", "false").lower() == "true"
 MINIO_PUBLIC_ENDPOINT = env("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
 MINIO_PUBLIC_USE_SSL = env("MINIO_PUBLIC_USE_SSL", "false").lower() == "true"
