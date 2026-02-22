@@ -46,6 +46,7 @@ urlpatterns = [
     path("api/medications/", include("medications.urls")),
     path("api/timeline/", include("timeline.urls")),
     path('api/careplans/', include('careplans.urls')),
+    path("api/documents/", include("documents.urls")),
 ]
 
 if settings.DEBUG:

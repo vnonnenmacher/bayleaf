@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import DosageUnit, Service, Address, Contact
+from .models import Address, Contact, DosageUnit, Organization, Service
 
 
 @admin.register(Service)
@@ -31,3 +31,10 @@ class ContactInline(admin.StackedInline):
 
 
 admin.site.register(DosageUnit)
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "code")
