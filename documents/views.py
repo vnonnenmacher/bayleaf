@@ -145,15 +145,3 @@ class DocumentVersionDownloadURLView(APIView):
             {"url": url, "expires_in": settings.MINIO_PRESIGN_EXPIRES},
             status=status.HTTP_200_OK,
         )
-
-
-class DocumentVersionRequestIndexView(APIView):
-    permission_classes = [IsAgentOrProfessional]
-
-    def post(self, request, pk):
-        version = generics.get_object_or_404(DocumentVersion, id=pk)
-        version.index_status = DocumentVersion.IndexStatus.PENDING
-        version.index_error = ""
-        version.indexed_at = None
-        version.save(update_fields=["index_status", "index_error", "indexed_at"])
-        return Response(DocumentVersionSerializer(version).data, status=status.HTTP_202_ACCEPTED)

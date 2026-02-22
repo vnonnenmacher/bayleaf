@@ -6,7 +6,6 @@ from documents.views import (
     DocumentVersionDownloadURLView,
     DocumentVersionListCreateView,
     DocumentVersionPublishView,
-    DocumentVersionRequestIndexView,
     DocumentVersionRetrieveView,
     DocumentVersionUploadView,
 )
@@ -23,10 +22,5 @@ urlpatterns = [
         "versions/<uuid:pk>/download-url/",
         DocumentVersionDownloadURLView.as_view(),
         name="document-version-download-url",
-    ),
-    path(
-        "versions/<uuid:pk>/request-index/",
-        DocumentVersionRequestIndexView.as_view(),
-        name="document-version-request-index",
     ),
 ]

@@ -49,11 +49,6 @@ class DocumentVersion(models.Model):
         MINIO = "minio", "MinIO"
         S3 = "s3", "S3"
 
-    class IndexStatus(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        INDEXED = "INDEXED", "Indexed"
-        FAILED = "FAILED", "Failed"
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     family = models.ForeignKey(DocumentFamily, on_delete=models.CASCADE, related_name="versions")
     version_label = models.CharField(max_length=64)
@@ -71,14 +66,6 @@ class DocumentVersion(models.Model):
     content_type = models.CharField(max_length=128, blank=True)
     size_bytes = models.BigIntegerField(null=True, blank=True)
     content_hash = models.CharField(max_length=64, blank=True)
-
-    index_status = models.CharField(
-        max_length=16,
-        choices=IndexStatus.choices,
-        default=IndexStatus.PENDING,
-    )
-    indexed_at = models.DateTimeField(null=True, blank=True)
-    index_error = models.TextField(blank=True)
 
     created_by = models.ForeignKey(
         "professionals.Professional",

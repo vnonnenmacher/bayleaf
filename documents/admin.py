@@ -16,12 +16,11 @@ class DocumentVersionAdmin(admin.ModelAdmin):
         "family",
         "version_label",
         "status",
-        "index_status",
         "effective_from",
         "effective_to",
         "bucket",
         "created_at",
     )
-    list_filter = ("status", "index_status", "storage_provider", "bucket")
+    list_filter = ("status", "storage_provider", "bucket")
     search_fields = ("family__doc_key", "family__title", "version_label", "object_key", "content_hash")
     autocomplete_fields = ("family", "created_by")

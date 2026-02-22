@@ -45,9 +45,6 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
             "content_type",
             "size_bytes",
             "content_hash",
-            "index_status",
-            "indexed_at",
-            "index_error",
             "created_by",
             "created_at",
         ]
@@ -56,8 +53,6 @@ class DocumentVersionSerializer(serializers.ModelSerializer):
             "family",
             "size_bytes",
             "content_hash",
-            "indexed_at",
-            "index_error",
             "created_by",
             "created_at",
         ]
