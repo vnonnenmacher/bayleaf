@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.conf import settings
 from django.utils.dateparse import parse_date
 from rest_framework import generics, status
@@ -16,12 +16,19 @@ from documents.storage import get_documents_storage_client
 from professionals.permissions import IsAgentOrProfessional
 
 
+def _document_family_queryset_with_latest_version():
+    latest_version_uuid_subquery = (
+        DocumentVersion.objects.filter(family_id=OuterRef("pk")).order_by("-created_at").values("id")[:1]
+    )
+    return DocumentFamily.objects.annotate(latest_version_uuid=Subquery(latest_version_uuid_subquery))
+
+
 class DocumentFamilyListCreateView(generics.ListCreateAPIView):
     serializer_class = DocumentFamilySerializer
     permission_classes = [IsAgentOrProfessional]
 
     def get_queryset(self):
-        queryset = DocumentFamily.objects.all().order_by("title", "doc_key")
+        queryset = _document_family_queryset_with_latest_version().order_by("title", "doc_key")
 
         org = self.request.query_params.get("org")
         if org:
@@ -30,6 +37,10 @@ class DocumentFamilyListCreateView(generics.ListCreateAPIView):
         doc_key = self.request.query_params.get("doc_key")
         if doc_key:
             queryset = queryset.filter(doc_key=doc_key)
+
+        search_doc_key = self.request.query_params.get("search_doc_key")
+        if search_doc_key:
+            queryset = queryset.filter(doc_key__startswith=search_doc_key)
 
         doc_type = self.request.query_params.get("doc_type")
         if doc_type:
@@ -50,7 +61,7 @@ class DocumentFamilyListCreateView(generics.ListCreateAPIView):
 
 
 class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateAPIView):
-    queryset = DocumentFamily.objects.all()
+    queryset = _document_family_queryset_with_latest_version()
     serializer_class = DocumentFamilySerializer
     permission_classes = [IsAgentOrProfessional]
 

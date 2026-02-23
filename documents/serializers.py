@@ -10,6 +10,8 @@ from professionals.models import Professional
 
 
 class DocumentFamilySerializer(serializers.ModelSerializer):
+    latest_version_uuid = serializers.UUIDField(read_only=True, allow_null=True)
+
     class Meta:
         model = DocumentFamily
         fields = [
@@ -20,10 +22,11 @@ class DocumentFamilySerializer(serializers.ModelSerializer):
             "doc_type",
             "description",
             "tags",
+            "latest_version_uuid",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "latest_version_uuid", "created_at", "updated_at"]
         extra_kwargs = {
             "org": {"required": False, "allow_null": True},
         }
