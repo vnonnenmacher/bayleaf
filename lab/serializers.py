@@ -18,6 +18,7 @@ from lab.models import (
     MeasurementUnit,
     RequestedExam,
     Sample,
+    Sector,
     SampleState,
     SampleType,
     Tag,
@@ -336,10 +337,16 @@ class EquipmentGroupSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "description"]
 
 
+class SectorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sector
+        fields = ["id", "name", "description"]
+
+
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Equipment
-        fields = ["id", "name", "group", "manufacturer"]
+        fields = ["id", "code", "name", "group", "manufacturer"]
 
 
 class AnalyteSerializer(serializers.ModelSerializer):

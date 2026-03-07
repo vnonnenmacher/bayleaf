@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from lab.models import SampleType, AllowedStateTransition, SampleState
+from lab.models import (
+    AllowedStateTransition,
+    Equipment,
+    EquipmentGroup,
+    SampleState,
+    SampleType,
+    Sector,
+)
 
 
 # Register your models here.
@@ -28,3 +35,22 @@ class SampleStateAdmin(admin.ModelAdmin):
 class AllowedStateTransitionAdmin(admin.ModelAdmin):
     list_display = ['from_state', 'to_state']
     autocomplete_fields = ['from_state', 'to_state']
+
+
+@admin.register(Sector)
+class SectorAdmin(admin.ModelAdmin):
+    list_display = ["name", "description"]
+    search_fields = ["name", "description"]
+
+
+@admin.register(EquipmentGroup)
+class EquipmentGroupAdmin(admin.ModelAdmin):
+    list_display = ["name", "description"]
+    search_fields = ["name", "description"]
+
+
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ["name", "code", "group", "manufacturer"]
+    search_fields = ["name", "code", "manufacturer", "group__name"]
+    list_filter = ["group"]

@@ -15,6 +15,7 @@ from .views import (
     MeasurementUnitViewSet,
     SampleStateViewSet,
     SampleTypeViewSet,
+    SectorViewSet,
     SampleViewSet,
     TagViewSet,
 )
@@ -32,6 +33,7 @@ router.register(r'tags', TagViewSet, basename='tag')
 router.register(r'exam-requests', ExamRequestViewSet, basename='examrequest')
 router.register(r'exam-field-results', ExamFieldResultViewSet, basename='examfieldresult')
 router.register(r'equipment-groups', EquipmentGroupViewSet, basename='equipmentgroup')
+router.register(r'sectors', SectorViewSet, basename='sector')
 router.register(r'equipments', EquipmentViewSet, basename='equipment')
 router.register(r'analytes', AnalyteViewSet, basename='analyte')
 router.register(r'analyte-codes', AnalyteCodeViewSet, basename='analytecode')

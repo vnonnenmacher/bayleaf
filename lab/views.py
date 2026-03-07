@@ -19,6 +19,7 @@ from lab.models import (
     EquipmentGroup,
     MeasurementUnit,
     Sample,
+    Sector,
     SampleState,
     SampleStateTransition,
     SampleType,
@@ -42,6 +43,7 @@ from lab.serializers import (
     SampleSerializer,
     SampleStateSerializer,
     SampleTypeSerializer,
+    SectorSerializer,
     TagSerializer,
 )
 from professionals.models import Professional
@@ -209,10 +211,42 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     permission_classes = [IsProfessional]
 
 
+class SectorViewSet(viewsets.ModelViewSet):
+    queryset = Sector.objects.all()
+    serializer_class = SectorSerializer
+    permission_classes = [IsProfessional]
+
+    @action(detail=False, methods=["get"], url_path="term-search", permission_classes=[IsProfessional])
+    def term_search(self, request):
+        term = (request.query_params.get("term") or "").strip()
+        if not term:
+            return Response({"error": "Missing search term"}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = self.get_queryset().filter(name__icontains=term).order_by("name")
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page if page is not None else queryset, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
+
+
 class EquipmentViewSet(viewsets.ModelViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer
     permission_classes = [IsProfessional]
+
+    @action(detail=False, methods=["get"], url_path="term-search", permission_classes=[IsProfessional])
+    def term_search(self, request):
+        term = (request.query_params.get("term") or "").strip()
+        if not term:
+            return Response({"error": "Missing search term"}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = self.get_queryset().filter(name__icontains=term).order_by("name")
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page if page is not None else queryset, many=True)
+        if page is not None:
+            return self.get_paginated_response(serializer.data)
+        return Response(serializer.data)
 
 
 class AnalyteViewSet(viewsets.ModelViewSet):

@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from lab.models import SampleStateTransition
+from lab.models import Equipment, EquipmentGroup, SampleStateTransition, Sector
 
 
 @pytest.mark.django_db
@@ -177,3 +177,43 @@ def test_exam_request_cancel_requires_professional(api_client, user, exam_reques
     response = api_client.post(url, data={"cancel_reason": "duplicate"}, format="json")
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_sector_term_search_returns_filtered_results(api_client, professional):
+    api_client.force_authenticate(user=professional)
+    Sector.objects.create(name="Bioquimica", description="desc")
+    Sector.objects.create(name="Parasitologia", description="desc")
+
+    url = reverse("sector-term-search")
+    response = api_client.get(url, {"term": "bio"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["name"] == "Bioquimica"
+
+
+@pytest.mark.django_db
+def test_equipment_term_search_returns_filtered_results(api_client, professional):
+    api_client.force_authenticate(user=professional)
+    group = EquipmentGroup.objects.create(name="Chemistry")
+    Equipment.objects.create(name="Cobas 6000", code="COB6000", group=group)
+    Equipment.objects.create(name="Sysmex XN", code="XN", group=group)
+
+    url = reverse("equipment-term-search")
+    response = api_client.get(url, {"term": "cob"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["name"] == "Cobas 6000"
+
+
+@pytest.mark.django_db
+def test_sector_term_search_requires_term(api_client, professional):
+    api_client.force_authenticate(user=professional)
+    url = reverse("sector-term-search")
+
+    response = api_client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.data["error"] == "Missing search term"
