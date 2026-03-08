@@ -108,6 +108,9 @@ class DocumentsStorageClient:
             expires=timedelta(seconds=expires),
         )
 
+    def delete_object(self, bucket, object_key):
+        self.client.remove_object(bucket, object_key)
+
 
 def get_documents_storage_client():
     return DocumentsStorageClient()

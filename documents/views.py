@@ -11,7 +11,7 @@ from documents.serializers import (
     DocumentVersionSerializer,
     DocumentVersionUploadSerializer,
 )
-from documents.services import publish_version
+from documents.services import delete_document_family, publish_version
 from documents.storage import get_documents_storage_client
 from professionals.permissions import IsAgentOrProfessional
 
@@ -60,10 +60,17 @@ class DocumentFamilyListCreateView(generics.ListCreateAPIView):
         return queryset
 
 
-class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
     queryset = _document_family_queryset_with_latest_version()
     serializer_class = DocumentFamilySerializer
     permission_classes = [IsAgentOrProfessional]
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            delete_document_family(self.kwargs["pk"])
+        except DocumentFamily.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DocumentVersionListView(generics.ListAPIView):

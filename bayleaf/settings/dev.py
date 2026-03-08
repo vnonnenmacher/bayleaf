@@ -275,12 +275,12 @@ INTERNAL_IPS = ["127.0.0.1", "localhost"]
 # ------------------------------------------------------------
 # MinIO / document storage
 # ------------------------------------------------------------
-MINIO_ENDPOINT = env("MINIO_ENDPOINT", "minio:9000")
-MINIO_ACCESS_KEY = env("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = env("MINIO_SECRET_KEY", "minioadmin")
-MINIO_USE_SSL = env("MINIO_USE_SSL", "false").lower() == "true"
-MINIO_PUBLIC_ENDPOINT = env("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
-MINIO_PUBLIC_USE_SSL = env("MINIO_PUBLIC_USE_SSL", "false").lower() == "true"
-MINIO_REGION = env("MINIO_REGION", "")
+MINIO_ENDPOINT = env("MINIO_ENDPOINT", "https://minio.nonnenmacher.tech")
+MINIO_ACCESS_KEY = env("MINIO_ACCESS_KEY", "client-app")
+MINIO_SECRET_KEY = env("MINIO_SECRET_KEY", "--")
+MINIO_USE_SSL = env("MINIO_USE_SSL", "true").lower() == "true"
+MINIO_PUBLIC_ENDPOINT = env("MINIO_PUBLIC_ENDPOINT", "https://minio.nonnenmacher.tech")
+MINIO_PUBLIC_USE_SSL = env("MINIO_PUBLIC_USE_SSL", "true").lower() == "true"
+MINIO_REGION = env("MINIO_REGION", "us-east-1")
 BAYLEAF_DOCS_BUCKET = env("BAYLEAF_DOCS_BUCKET", "bayleaf-documents")
 MINIO_PRESIGN_EXPIRES = int(env("MINIO_PRESIGN_EXPIRES", "900"))
