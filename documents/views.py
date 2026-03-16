@@ -2,6 +2,7 @@ from django.db.models import OuterRef, Q, Subquery
 from django.conf import settings
 from django.utils.dateparse import parse_date
 from rest_framework import generics, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,7 +14,8 @@ from documents.serializers import (
 )
 from documents.services import delete_document_family, publish_version
 from documents.storage import get_documents_storage_client
-from professionals.permissions import IsAgentOrProfessional
+from professionals.models import Professional
+from professionals.permissions import IsProfessional
 
 
 def _document_family_queryset_with_latest_version():
@@ -23,16 +25,30 @@ def _document_family_queryset_with_latest_version():
     return DocumentFamily.objects.annotate(latest_version_uuid=Subquery(latest_version_uuid_subquery))
 
 
+def _get_professional_org_or_403(request):
+    professional = (
+        Professional.objects.filter(user_ptr_id=request.user.id)
+        .prefetch_related("organizations")
+        .first()
+    )
+    if not professional:
+        raise PermissionDenied("Authenticated user is not a professional.")
+
+    organization = professional.organizations.order_by("name", "id").first()
+    if not organization:
+        raise PermissionDenied("Professional must belong to an organization.")
+
+    return organization
+
+
 class DocumentFamilyListCreateView(generics.ListCreateAPIView):
     serializer_class = DocumentFamilySerializer
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
 
     def get_queryset(self):
+        organization = _get_professional_org_or_403(self.request)
         queryset = _document_family_queryset_with_latest_version().order_by("title", "doc_key")
-
-        org = self.request.query_params.get("org")
-        if org:
-            queryset = queryset.filter(org_id=org)
+        queryset = queryset.filter(org_id=organization.id)
 
         doc_key = self.request.query_params.get("doc_key")
         if doc_key:
@@ -59,15 +75,23 @@ class DocumentFamilyListCreateView(generics.ListCreateAPIView):
 
         return queryset
 
+    def perform_create(self, serializer):
+        organization = _get_professional_org_or_403(self.request)
+        serializer.save(org=organization)
+
 
 class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = _document_family_queryset_with_latest_version()
     serializer_class = DocumentFamilySerializer
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
+
+    def get_queryset(self):
+        organization = _get_professional_org_or_403(self.request)
+        return _document_family_queryset_with_latest_version().filter(org_id=organization.id)
 
     def destroy(self, request, *args, **kwargs):
+        family = self.get_object()
         try:
-            delete_document_family(self.kwargs["pk"])
+            delete_document_family(family.id)
         except DocumentFamily.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -75,24 +99,34 @@ class DocumentFamilyRetrieveUpdateView(generics.RetrieveUpdateDestroyAPIView):
 
 class DocumentVersionListView(generics.ListAPIView):
     serializer_class = DocumentVersionSerializer
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
 
     def get_queryset(self):
-        return DocumentVersion.objects.filter(family_id=self.kwargs["family_id"]).order_by("-created_at")
+        organization = _get_professional_org_or_403(self.request)
+        return DocumentVersion.objects.filter(
+            family_id=self.kwargs["family_id"],
+            family__org_id=organization.id,
+        ).order_by("-created_at")
 
 
 class DocumentVersionRetrieveView(generics.RetrieveAPIView):
-    queryset = DocumentVersion.objects.select_related("family", "created_by").all()
     serializer_class = DocumentVersionSerializer
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
+
+    def get_queryset(self):
+        organization = _get_professional_org_or_403(self.request)
+        return DocumentVersion.objects.select_related("family", "created_by").filter(
+            family__org_id=organization.id
+        )
 
 
 class DocumentVersionUploadView(generics.CreateAPIView):
     serializer_class = DocumentVersionUploadSerializer
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
 
     def create(self, request, *args, **kwargs):
-        family = generics.get_object_or_404(DocumentFamily, id=self.kwargs["family_id"])
+        organization = _get_professional_org_or_403(request)
+        family = generics.get_object_or_404(DocumentFamily, id=self.kwargs["family_id"], org_id=organization.id)
         serializer = self.get_serializer(data=request.data, context={"request": request, "family": family})
         serializer.is_valid(raise_exception=True)
         version = serializer.save()
@@ -102,9 +136,10 @@ class DocumentVersionUploadView(generics.CreateAPIView):
 
 
 class DocumentVersionPublishView(APIView):
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
 
     def post(self, request, pk):
+        organization = _get_professional_org_or_403(request)
         effective_from_raw = request.data.get("effective_from")
         effective_from = None
         if effective_from_raw:
@@ -116,17 +151,19 @@ class DocumentVersionPublishView(APIView):
                 )
 
         try:
-            version = publish_version(pk, effective_from=effective_from)
+            version = DocumentVersion.objects.get(id=pk, family__org_id=organization.id)
+            version = publish_version(version.id, effective_from=effective_from)
         except DocumentVersion.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(DocumentVersionSerializer(version).data, status=status.HTTP_200_OK)
 
 
 class DocumentVersionDownloadURLView(APIView):
-    permission_classes = [IsAgentOrProfessional]
+    permission_classes = [IsProfessional]
 
     def get(self, request, pk):
-        version = generics.get_object_or_404(DocumentVersion, id=pk)
+        organization = _get_professional_org_or_403(request)
+        version = generics.get_object_or_404(DocumentVersion, id=pk, family__org_id=organization.id)
         storage = get_documents_storage_client()
         url = storage.presign_get(version.bucket, version.object_key)
         return Response(

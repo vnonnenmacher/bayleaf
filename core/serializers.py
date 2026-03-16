@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Service, Contact, Address, DosageUnit
+from .models import Service, Contact, Address, DosageUnit, Organization
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -26,3 +26,9 @@ class DosageUnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = DosageUnit
         fields = ("id", "code", "name")
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ("id", "name", "code", "is_active")

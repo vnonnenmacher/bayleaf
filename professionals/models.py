@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 from users.models import User, Person
 
-from core.models import Service
+from core.models import Organization, Service
 
 
 class Specialization(models.Model):
@@ -26,6 +26,7 @@ class Professional(User, Person):
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
 
     services = models.ManyToManyField(Service, related_name="professionals", blank=True)
+    organizations = models.ManyToManyField(Organization, related_name="professionals", blank=True)
     specializations = models.ManyToManyField(Specialization, related_name="professionals", blank=True)
     bio = models.TextField(blank=True, null=True)
 

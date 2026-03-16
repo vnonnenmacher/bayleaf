@@ -5,7 +5,7 @@ from professionals.helpers import get_next_n_weekday_dates
 from users.models import Identifier, IdentifierType
 from users.serializers import IdentifierSerializer
 from professionals.models import Role, ServiceSlot, Shift, Professional, Specialization
-from core.serializers import AddressSerializer, ContactSerializer
+from core.serializers import AddressSerializer, ContactSerializer, OrganizationSerializer
 from core.models import Address, Contact, Service
 
 class SpecializationSerializer(serializers.ModelSerializer):
@@ -25,9 +25,11 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class ProfessionalListSerializer(serializers.ModelSerializer):
+    organizations = OrganizationSerializer(many=True, read_only=True)
+
     class Meta:
         model = Professional
-        fields = ["id", "did", "first_name", "last_name", "email", "avatar", "specializations"]
+        fields = ["id", "did", "first_name", "last_name", "email", "avatar", "specializations", "organizations"]
 
 
 class ProfessionalSerializer(serializers.ModelSerializer):
@@ -42,6 +44,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     role_id = serializers.IntegerField(required=False, write_only=True)
     avatar = serializers.ImageField(required=False, allow_null=True)
     specializations = SpecializationSerializer(many=True, required=False)
+    organizations = OrganizationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Professional
@@ -62,6 +65,7 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             "bio",
             "avatar",
             "specializations",
+            "organizations",
         ]
         extra_kwargs = {"password": {"write_only": True},
                         "did": {"read_only": True}}

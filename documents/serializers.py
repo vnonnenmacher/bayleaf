@@ -26,10 +26,7 @@ class DocumentFamilySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "latest_version_uuid", "created_at", "updated_at"]
-        extra_kwargs = {
-            "org": {"required": False, "allow_null": True},
-        }
+        read_only_fields = ["id", "org", "latest_version_uuid", "created_at", "updated_at"]
 
 
 class DocumentVersionSerializer(serializers.ModelSerializer):

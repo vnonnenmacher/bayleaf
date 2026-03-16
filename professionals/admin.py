@@ -21,7 +21,7 @@ class ProfessionalAdmin(admin.ModelAdmin):
     search_fields = ['first_name', 'last_name', 'email']
     inlines = [IdentifierInline]
     autocomplete_fields = ['role', 'address1', 'address2', 'primary_contact', 'secondary_contact']
-    filter_horizontal = ['services', 'specializations']  # ✅ These now work
+    filter_horizontal = ['services', 'specializations', 'organizations']  # ✅ These now work
 
     fieldsets = (
         ("Basic Info", {
@@ -36,7 +36,7 @@ class ProfessionalAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
         ("Professional Tags", {
-            'fields': ('services', 'specializations'),
+            'fields': ('services', 'specializations', 'organizations'),
         }),
     )
 
