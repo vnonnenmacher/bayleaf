@@ -4,33 +4,34 @@ networks:
   bayleaf_net:
     name: bayleaf_net
 
+x-api-env: &api-env
+  # These are defaults; override via --env-file if you like
+  DJANGO_SETTINGS_MODULE: "bayleaf.settings.prod"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+  BAYLEAF_RSA_PRIVATE_KEY: ${BAYLEAF_RSA_PRIVATE_KEY}
+  BAYLEAF_RSA_PUBLIC_KEY: ${BAYLEAF_RSA_PUBLIC_KEY}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost}
+  CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-"0"}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+  RUN_MODE: "prod"
+  DB_HOST: "db"
+  DB_NAME: "bayleaf"
+  DB_USER: "bayleaf"
+  DB_PASSWORD: "bayleaf"
+  MINIO_ENDPOINT: ${MINIO_ENDPOINT:-"localhost:9000"}
+  MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+  MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+  MINIO_USE_SSL: ${MINIO_USE_SSL:-"false"}
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-"localhost:9000"}
+  MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL:-"false"}
+  MINIO_REGION: ${MINIO_REGION:-""}
+  BAYLEAF_DOCS_BUCKET: ${BAYLEAF_DOCS_BUCKET:-"bayleaf-documents"}
+  MINIO_PRESIGN_EXPIRES: ${MINIO_PRESIGN_EXPIRES:-"900"}
 x-api-base: &api-base
   build: .
   working_dir: /usr/src/app
-  environment:
-    # These are defaults; override via --env-file if you like
-    DJANGO_SETTINGS_MODULE: "bayleaf.settings.prod"
-    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-    BAYLEAF_RSA_PRIVATE_KEY: ${BAYLEAF_RSA_PRIVATE_KEY}
-    BAYLEAF_RSA_PUBLIC_KEY: ${BAYLEAF_RSA_PUBLIC_KEY}
-    ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-    CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-"0"}
-    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
-    RUN_MODE: "prod"
-    DB_HOST: "db"
-    DB_NAME: "bayleaf"
-    DB_USER: "bayleaf"
-    DB_PASSWORD: "bayleaf"
-    MINIO_ENDPOINT: ${MINIO_ENDPOINT:-"localhost:9000"}
-    MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
-    MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-    MINIO_USE_SSL: ${MINIO_USE_SSL:-"false"}
-    MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-"localhost:9000"}
-    MINIO_PUBLIC_USE_SSL: ${MINIO_PUBLIC_USE_SSL:-"false"}
-    MINIO_REGION: ${MINIO_REGION:-""}
-    BAYLEAF_DOCS_BUCKET: ${BAYLEAF_DOCS_BUCKET:-"bayleaf-documents"}
-    MINIO_PRESIGN_EXPIRES: ${MINIO_PRESIGN_EXPIRES:-"900"}
+  environment: *api-env
   networks: [bayleaf_net]
   depends_on:
     db:
@@ -50,7 +51,9 @@ services:
     <<: *api-base
     profiles: ["dev"]
     environment:
+      <<: *api-env
       DJANGO_SETTINGS_MODULE: "bayleaf.settings.dev"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-insecure-local-only-key}
       RUN_MODE: "dev"
       DEBUG: "1"
       DB_HOST: "db"

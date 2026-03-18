@@ -71,34 +71,39 @@ class DocumentsStorageClient:
 
     def ensure_bucket(self, bucket):
         try:
-            if not self.client.bucket_exists(bucket):
-                self.client.make_bucket(bucket)
-        except S3Error:
-            # A concurrent create can race; verify again before surfacing.
-            if not self.client.bucket_exists(bucket):
-                raise
+            self.client.make_bucket(bucket)
+        except S3Error as exc:
+            if exc.code in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+                return
+            raise
 
     def upload_fileobj(self, fileobj, bucket, object_key, content_type):
-        self.ensure_bucket(bucket)
+        def _put_once():
+            fileobj.seek(0)
+            reader = _HashingReader(fileobj)
+            size = getattr(fileobj, "size", None)
+            if size is None:
+                current = fileobj.tell()
+                fileobj.seek(0, 2)
+                size = fileobj.tell()
+                fileobj.seek(current)
 
-        fileobj.seek(0)
-        reader = _HashingReader(fileobj)
-        size = getattr(fileobj, "size", None)
-        if size is None:
-            current = fileobj.tell()
-            fileobj.seek(0, 2)
-            size = fileobj.tell()
-            fileobj.seek(current)
+            self.client.put_object(
+                bucket,
+                object_key,
+                data=reader,
+                length=size,
+                content_type=content_type or "application/octet-stream",
+            )
+            return reader.total_read, reader.hasher.hexdigest()
 
-        self.client.put_object(
-            bucket,
-            object_key,
-            data=reader,
-            length=size,
-            content_type=content_type or "application/octet-stream",
-        )
-
-        return reader.total_read, reader.hasher.hexdigest()
+        try:
+            return _put_once()
+        except S3Error as exc:
+            if exc.code != "NoSuchBucket":
+                raise
+            self.ensure_bucket(bucket)
+            return _put_once()
 
     def presign_get(self, bucket, object_key, expires_seconds=None):
         expires = expires_seconds or settings.MINIO_PRESIGN_EXPIRES

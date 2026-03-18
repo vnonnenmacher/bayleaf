@@ -1,26 +1,14 @@
 from django.urls import path
 
 from documents.views import (
-    DocumentFamilyListCreateView,
-    DocumentFamilyRetrieveUpdateView,
-    DocumentVersionDownloadURLView,
-    DocumentVersionListView,
-    DocumentVersionPublishView,
-    DocumentVersionRetrieveView,
-    DocumentVersionUploadView,
+    DocumentDownloadURLView,
+    DocumentListCreateView,
+    DocumentRetrieveUpdateDestroyView,
 )
 
 
 urlpatterns = [
-    path("", DocumentFamilyListCreateView.as_view(), name="document-family-list-create"),
-    path("<uuid:pk>/", DocumentFamilyRetrieveUpdateView.as_view(), name="document-family-retrieve-update"),
-    path("<uuid:family_id>/versions/", DocumentVersionListView.as_view(), name="document-version-list"),
-    path("<uuid:family_id>/versions/upload/", DocumentVersionUploadView.as_view(), name="document-version-upload"),
-    path("versions/<uuid:pk>/", DocumentVersionRetrieveView.as_view(), name="document-version-retrieve"),
-    path("versions/<uuid:pk>/publish/", DocumentVersionPublishView.as_view(), name="document-version-publish"),
-    path(
-        "versions/<uuid:pk>/download-url/",
-        DocumentVersionDownloadURLView.as_view(),
-        name="document-version-download-url",
-    ),
+    path("", DocumentListCreateView.as_view(), name="document-list-create"),
+    path("<uuid:pk>/", DocumentRetrieveUpdateDestroyView.as_view(), name="document-retrieve-update-destroy"),
+    path("<uuid:pk>/download-url/", DocumentDownloadURLView.as_view(), name="document-download-url"),
 ]
