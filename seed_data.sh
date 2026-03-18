@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 python3 manage.py create_dosage_units
