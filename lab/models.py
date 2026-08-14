@@ -195,7 +195,16 @@ class ExamRequest(TimeStampedModel):
     """
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="exam_requests")
     requested_by = models.ForeignKey(Professional, on_delete=models.PROTECT, related_name="exam_requests")
+    code = models.CharField(max_length=64, unique=True, null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
+    is_validated = models.BooleanField(default=False)
+    validated_by = models.ForeignKey(
+        Professional,
+        on_delete=models.SET_NULL,
+        related_name="validated_exam_requests",
+        blank=True,
+        null=True,
+    )
     canceled_at = models.DateTimeField(blank=True, null=True)
     canceled_by = models.ForeignKey(
         Professional,

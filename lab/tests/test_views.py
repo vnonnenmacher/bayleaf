@@ -4,7 +4,17 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from lab.models import Equipment, EquipmentGroup, SampleStateTransition, Sector
+from lab.helpers.exam_request_helper import ExamRequestHelper
+from lab.models import (
+    Equipment,
+    EquipmentGroup,
+    Exam,
+    ExamVersion,
+    RequestedExam,
+    SampleState,
+    SampleStateTransition,
+    Sector,
+)
 
 
 @pytest.mark.django_db
@@ -217,3 +227,120 @@ def test_sector_term_search_requires_term(api_client, professional):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["error"] == "Missing search term"
+
+
+@pytest.mark.django_db
+def test_search_exam_requests_filters_by_is_completed_and_prunes_tree(
+    api_client,
+    professional,
+    patient,
+    sample_type,
+):
+    api_client.force_authenticate(user=professional)
+
+    requested_state = SampleState.objects.create(name="Requested", is_initial_state=True)
+
+    exam_one = Exam.objects.create(
+        name="Glucose",
+        code="GLU",
+        description="Glucose exam",
+        material=sample_type,
+    )
+    exam_two = Exam.objects.create(
+        name="Cholesterol",
+        code="CHOL",
+        description="Cholesterol exam",
+        material=sample_type,
+    )
+    version_one = ExamVersion.objects.create(exam=exam_one, version=1, is_active=True)
+    version_two = ExamVersion.objects.create(exam=exam_two, version=1, is_active=True)
+
+    helper = ExamRequestHelper()
+    exam_request = helper.create_exam_request(
+        patient=patient,
+        requested_by=professional,
+        exam_versions=[version_one, version_two],
+        code="REQ-1001",
+        notes="fasting",
+    )
+
+    sample = exam_request.samples.first()
+    SampleStateTransition.objects.create(
+        sample=sample,
+        previous_state=None,
+        new_state=requested_state,
+        changed_by=professional,
+        transaction_hash="hash-req-1001",
+        is_verified=True,
+    )
+
+    first_requested_exam = RequestedExam.objects.get(exam_request=exam_request, exam_version=version_one)
+    first_requested_exam.is_completed = True
+    first_requested_exam.save(update_fields=["is_completed"])
+
+    url = reverse("examrequest-search-exam-requests")
+    response = api_client.get(url, {"is_completed": "true"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+
+    result = response.data["results"][0]
+    assert result["request"]["code"] == "REQ-1001"
+    assert result["request"]["patient"]["first_name"] == patient.first_name
+    assert result["request"]["patient"]["birth_date"] == str(patient.birth_date)
+
+    assert len(result["samples"]) == 1
+    assert len(result["samples"][0]["exams"]) == 1
+    assert result["samples"][0]["exams"][0]["is_completed"] is True
+    assert result["samples"][0]["exams"][0]["exam"]["code"] == "GLU"
+
+
+@pytest.mark.django_db
+def test_search_exam_requests_filters_by_sample_status(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+
+    requested_state = SampleState.objects.create(name="Requested", is_initial_state=True)
+    processing_state = SampleState.objects.create(name="Processing")
+
+    exam = Exam.objects.create(
+        name="Triglycerides",
+        code="TRI",
+        description="Triglycerides exam",
+        material=sample_type,
+    )
+    version = ExamVersion.objects.create(exam=exam, version=1, is_active=True)
+
+    helper = ExamRequestHelper()
+    exam_request = helper.create_exam_request(
+        patient=patient,
+        requested_by=professional,
+        exam_versions=[version],
+        code="REQ-2001",
+    )
+
+    sample = exam_request.samples.first()
+    SampleStateTransition.objects.create(
+        sample=sample,
+        previous_state=None,
+        new_state=requested_state,
+        changed_by=professional,
+        transaction_hash="hash-req-2001-a",
+        is_verified=True,
+    )
+    SampleStateTransition.objects.create(
+        sample=sample,
+        previous_state=requested_state,
+        new_state=processing_state,
+        changed_by=professional,
+        transaction_hash="hash-req-2001-b",
+        is_verified=True,
+    )
+
+    url = reverse("examrequest-search-exam-requests")
+    response = api_client.get(url, {"sample_status": str(processing_state.id)})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1
+    result = response.data["results"][0]
+    assert result["request"]["code"] == "REQ-2001"
+    assert result["samples"][0]["current_state"]["name"] == "Processing"

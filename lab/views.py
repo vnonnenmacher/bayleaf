@@ -1,5 +1,6 @@
 import uuid
 
+from django.db.models import Prefetch
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,7 @@ from lab.models import (
     Equipment,
     EquipmentGroup,
     MeasurementUnit,
+    RequestedExam,
     Sample,
     Sector,
     SampleState,
@@ -178,6 +180,164 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
     serializer_class = ExamRequestSerializer
     permission_classes = [IsProfessional]
     http_method_names = ["get", "post", "patch", "put", "head", "options"]
+
+    @staticmethod
+    def _parse_bool(value):
+        if value is None:
+            return None
+        normalized = str(value).strip().lower()
+        if normalized in {"1", "true", "yes", "y"}:
+            return True
+        if normalized in {"0", "false", "no", "n"}:
+            return False
+        return None
+
+    @staticmethod
+    def _parse_list_param(params, key):
+        raw_values = params.getlist(key)
+        values = []
+        for raw in raw_values:
+            values.extend(item.strip() for item in raw.split(",") if item.strip())
+        return values
+
+    @staticmethod
+    def _build_exam_payload(requested_exam):
+        exam = requested_exam.exam_version.exam
+        return {
+            "requested_exam_id": requested_exam.id,
+            "is_completed": requested_exam.is_completed,
+            "exam_version_id": requested_exam.exam_version.id,
+            "exam": {
+                "id": exam.id,
+                "code": exam.code,
+                "name": exam.name,
+                "sector": None,
+            },
+        }
+
+    @staticmethod
+    def _build_request_payload(exam_request):
+        validated_by = exam_request.validated_by
+        requested_by = exam_request.requested_by
+        birth_date = exam_request.patient.birth_date
+        return {
+            "id": exam_request.id,
+            "code": exam_request.code,
+            "notes": exam_request.notes,
+            "created_at": exam_request.created_at.isoformat() if exam_request.created_at else None,
+            "updated_at": exam_request.updated_at.isoformat() if exam_request.updated_at else None,
+            "is_validated": exam_request.is_validated,
+            "validated_by": None if validated_by is None else {
+                "id": validated_by.pk,
+                "full_name": validated_by.full_name,
+            },
+            "requested_by": {
+                "id": requested_by.pk,
+                "full_name": requested_by.full_name,
+            },
+            "patient": {
+                "pid": exam_request.patient.pid,
+                "first_name": exam_request.patient.first_name,
+                "last_name": exam_request.patient.last_name,
+                "birth_date": birth_date.isoformat() if birth_date else None,
+            },
+        }
+
+    @action(detail=False, methods=["get"], url_path="search-exam-requests", permission_classes=[IsProfessional])
+    def search_exam_requests(self, request):
+        code = (request.query_params.get("code") or "").strip()
+        is_validated = self._parse_bool(request.query_params.get("is_validated"))
+        is_completed = self._parse_bool(request.query_params.get("is_completed"))
+
+        sample_state_ids_raw = self._parse_list_param(request.query_params, "sample_status")
+        sample_state_names = {name.lower() for name in self._parse_list_param(request.query_params, "sample_status_name")}
+        sample_state_ids = set()
+        for value in sample_state_ids_raw:
+            try:
+                sample_state_ids.add(int(value))
+            except ValueError:
+                continue
+
+        queryset = self.get_queryset().select_related(
+            "patient",
+            "requested_by",
+            "validated_by",
+        )
+
+        if code:
+            queryset = queryset.filter(code__icontains=code)
+        if is_validated is not None:
+            queryset = queryset.filter(is_validated=is_validated)
+        if is_completed is not None:
+            queryset = queryset.filter(requested_exams__is_completed=is_completed).distinct()
+
+        sample_queryset = Sample.objects.select_related("sample_type").prefetch_related(
+            Prefetch(
+                "state_transitions",
+                queryset=SampleStateTransition.objects.select_related("new_state").order_by("-created_at"),
+            ),
+            Prefetch(
+                "requested_exams",
+                queryset=RequestedExam.objects.select_related("exam_version__exam").order_by("id"),
+            ),
+        )
+
+        queryset = queryset.prefetch_related(Prefetch("samples", queryset=sample_queryset)).order_by("-created_at")
+
+        payload = []
+        for exam_request in queryset:
+            samples_payload = []
+
+            for sample in exam_request.samples.all():
+                current_state = None
+                for transition in sample.state_transitions.all():
+                    if transition.is_verified:
+                        current_state = transition.new_state
+                        break
+
+                if sample_state_ids and (current_state is None or current_state.id not in sample_state_ids):
+                    continue
+
+                if sample_state_names:
+                    if current_state is None or current_state.name.lower() not in sample_state_names:
+                        continue
+
+                requested_exams = list(sample.requested_exams.all())
+                if is_completed is not None:
+                    requested_exams = [exam for exam in requested_exams if exam.is_completed == is_completed]
+
+                if is_completed is not None and not requested_exams:
+                    continue
+
+                samples_payload.append(
+                    {
+                        "id": sample.id,
+                        "sample_type": {
+                            "id": sample.sample_type.id,
+                            "name": sample.sample_type.name,
+                        },
+                        "current_state": None if current_state is None else {
+                            "id": current_state.id,
+                            "name": current_state.name,
+                        },
+                        "exams": [self._build_exam_payload(exam) for exam in requested_exams],
+                    }
+                )
+
+            if (sample_state_ids or sample_state_names or is_completed is not None) and not samples_payload:
+                continue
+
+            payload.append(
+                {
+                    "request": self._build_request_payload(exam_request),
+                    "samples": samples_payload,
+                }
+            )
+
+        page = self.paginate_queryset(payload)
+        if page is not None:
+            return self.get_paginated_response(page)
+        return Response(payload, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], permission_classes=[IsProfessional])
     def cancel(self, request, pk=None):

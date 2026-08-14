@@ -243,12 +243,13 @@ class ExamFieldSerializer(serializers.ModelSerializer):
 class RequestedExamSerializer(serializers.ModelSerializer):
     class Meta:
         model = RequestedExam
-        fields = ["id", "exam_version", "sample", "created_at", "updated_at"]
+        fields = ["id", "exam_version", "sample", "is_completed", "created_at", "updated_at"]
         read_only_fields = ("created_at", "updated_at")
 
 
 class ExamRequestSerializer(serializers.ModelSerializer):
     patient_uuid = serializers.UUIDField(write_only=True)
+    code = serializers.CharField(required=False)
     exam_version_ids = serializers.PrimaryKeyRelatedField(
         queryset=ExamVersion.objects.all(),
         many=True,
@@ -256,6 +257,8 @@ class ExamRequestSerializer(serializers.ModelSerializer):
     )
     requested_exams = RequestedExamSerializer(read_only=True, many=True)
     samples = SampleSerializer(read_only=True, many=True)
+    is_validated = serializers.BooleanField(read_only=True)
+    validated_by = serializers.PrimaryKeyRelatedField(read_only=True)
     canceled_by = serializers.PrimaryKeyRelatedField(read_only=True)
     canceled_at = serializers.DateTimeField(read_only=True)
 
@@ -263,11 +266,14 @@ class ExamRequestSerializer(serializers.ModelSerializer):
         model = ExamRequest
         fields = [
             "id",
+            "code",
             "patient_uuid",
             "notes",
             "exam_version_ids",
             "requested_exams",
             "samples",
+            "is_validated",
+            "validated_by",
             "canceled_at",
             "canceled_by",
             "cancel_reason",
@@ -280,6 +286,11 @@ class ExamRequestSerializer(serializers.ModelSerializer):
         if not Patient.objects.filter(pid=value).exists():
             raise serializers.ValidationError("Patient not found.")
         return value
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("code"):
+            raise serializers.ValidationError({"code": "This field is required."})
+        return attrs
 
     def create(self, validated_data):
         request = self.context.get("request")

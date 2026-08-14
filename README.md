@@ -99,7 +99,8 @@ Guidelines for adding new tests:
 
 The API is versioned and RESTful.
 
-- Swagger UI: `http://localhost:8000/api/docs/` (if enabled via drf-yasg)
+- Agent/client endpoint contract: [ENDPOINTS.md](ENDPOINTS.md)
+- Swagger UI: `http://localhost:8000/swagger/`
 - Django Admin Panel: `http://localhost:8000/admin/`
 - Postman Workspace: [Bayleaf API on Postman](https://www.postman.com/sierralogics/workspace/bayleaf-api)
 - Authentication: Token-based (JWT or Session depending on environment)
