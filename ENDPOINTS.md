@@ -600,6 +600,8 @@ Cancel with `POST /api/lab/exam-requests/{id}/cancel/` and optional `{"cancel_re
 
 Search with `GET /api/lab/exam-requests/search-exam-requests/`.
 
+Fetch results with `GET /api/lab/exam-requests/fetch-results/`.
+
 Filters:
 - `code=<text>`: partial match on request code.
 - `is_validated=true|false`.
@@ -675,6 +677,59 @@ Example response (`GET /api/lab/exam-requests/search-exam-requests/?is_completed
 ```
 
 When `is_completed=true` (or `false`) is provided, each sample keeps the same tree shape but only includes exam items that match the completion filter.
+
+### `GET /api/lab/exam-requests/fetch-results/`
+
+Professional only. Returns exam field results grouped by request → sample → exam. Designed for fast lookup when a user expands a row in the table. No pagination — callers provide explicit IDs.
+
+**Filters** (at least one required; combining is supported but unusual):
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `request_ids` | int (repeatable or comma-separated) | Filter by exam request IDs |
+| `sample_ids` | UUID (repeatable or comma-separated) | Filter by sample IDs |
+| `requested_exam_ids` | int (repeatable or comma-separated) | Filter by requested exam IDs |
+
+Missing all three filters returns `400 {"error":"..."}`.
+
+**Response shape:**
+
+```json
+[
+  {
+    "request": {
+      "id": 42,
+      "code": "LC5647253242"
+    },
+    "samples": [
+      {
+        "id": "e4474b5e-8716-497d-9538-5354142a09b7",
+        "sample_type": { "id": 1, "name": "Blood" },
+        "exams": [
+          {
+            "requested_exam_id": 101,
+            "is_completed": true,
+            "exam": { "id": 2, "code": "GLU", "name": "Glucose (Blood)" },
+            "field_results": [
+              {
+                "id": 9,
+                "field_name": "Result",
+                "field_code": "RES",
+                "raw_value": "5.40",
+                "computed_value": "5.40",
+                "classification": "normal",
+                "measurement_unit": { "name": "mg/dL", "code": "MG_DL" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+
+`measurement_unit` is `null` when the exam field has no unit configured. `field_results` is an empty array when no results have been injected yet. Exam result content (raw/computed values) is intentionally included here — this is the detail endpoint, unlike `search-exam-requests` which is the list.
 
 ### Search and injection actions
 

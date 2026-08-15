@@ -9,7 +9,10 @@ from lab.models import (
     Equipment,
     EquipmentGroup,
     Exam,
+    ExamField,
+    ExamFieldResult,
     ExamVersion,
+    MeasurementUnit,
     RequestedExam,
     SampleState,
     SampleStateTransition,
@@ -344,3 +347,107 @@ def test_search_exam_requests_filters_by_sample_status(api_client, professional,
     result = response.data["results"][0]
     assert result["request"]["code"] == "REQ-2001"
     assert result["samples"][0]["current_state"]["name"] == "Processing"
+
+
+# ---------------------------------------------------------------------------
+# fetch-results
+# ---------------------------------------------------------------------------
+
+def _make_exam_request(patient, professional, sample_type, code):
+    from lab.helpers.exam_request_helper import ExamRequestHelper
+    exam = Exam.objects.create(name=f"Exam {code}", code=code, description="", material=sample_type)
+    version = ExamVersion.objects.create(exam=exam, version=1, is_active=True)
+    helper = ExamRequestHelper()
+    return helper.create_exam_request(
+        patient=patient,
+        requested_by=professional,
+        exam_versions=[version],
+        code=f"REQ-{code}",
+    ), version
+
+
+@pytest.mark.django_db
+def test_fetch_results_requires_at_least_one_filter(api_client, professional):
+    api_client.force_authenticate(user=professional)
+    url = reverse("examrequest-fetch-results")
+
+    response = api_client.get(url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "error" in response.data
+
+
+@pytest.mark.django_db
+def test_fetch_results_by_request_id(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+    exam_request, version = _make_exam_request(patient, professional, sample_type, "GLU")
+
+    unit = MeasurementUnit.objects.create(name="mg/dL", code="MG_DL")
+    field = ExamField.objects.create(
+        exam_version=version,
+        name="Result",
+        code="RES",
+        field_type="decimal",
+        measurement_unit=unit,
+    )
+    req_exam = RequestedExam.objects.get(exam_request=exam_request)
+    ExamFieldResult.objects.create(
+        requested_exam=req_exam,
+        exam_field=field,
+        raw_value="5.40",
+        computed_value="5.40",
+        classification="normal",
+    )
+
+    url = reverse("examrequest-fetch-results")
+    response = api_client.get(url, {"request_ids": exam_request.id})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    result = response.data[0]
+    assert result["request"]["code"] == "REQ-GLU"
+    assert len(result["samples"]) == 1
+    exams = result["samples"][0]["exams"]
+    assert len(exams) == 1
+    assert exams[0]["exam"]["code"] == "GLU"
+    field_results = exams[0]["field_results"]
+    assert len(field_results) == 1
+    assert field_results[0]["raw_value"] == "5.40"
+    assert field_results[0]["measurement_unit"]["code"] == "MG_DL"
+
+
+@pytest.mark.django_db
+def test_fetch_results_by_sample_id(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+    exam_request, _ = _make_exam_request(patient, professional, sample_type, "NA")
+
+    sample = exam_request.samples.first()
+    url = reverse("examrequest-fetch-results")
+    response = api_client.get(url, {"sample_ids": str(sample.id)})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert str(response.data[0]["samples"][0]["id"]) == str(sample.id)
+
+
+@pytest.mark.django_db
+def test_fetch_results_by_requested_exam_id(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+    exam_request, _ = _make_exam_request(patient, professional, sample_type, "CRP")
+
+    req_exam = RequestedExam.objects.get(exam_request=exam_request)
+    url = reverse("examrequest-fetch-results")
+    response = api_client.get(url, {"requested_exam_ids": req_exam.id})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]["samples"][0]["exams"][0]["requested_exam_id"] == req_exam.id
+
+
+@pytest.mark.django_db
+def test_fetch_results_blocks_non_professional(api_client, user):
+    api_client.force_authenticate(user=user)
+    url = reverse("examrequest-fetch-results")
+    response = api_client.get(url, {"request_ids": "1"})
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

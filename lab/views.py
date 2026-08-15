@@ -339,6 +339,98 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(page)
         return Response(payload, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get"], url_path="fetch-results", permission_classes=[IsProfessional])
+    def fetch_results(self, request):
+        sample_ids = self._parse_list_param(request.query_params, "sample_ids")
+        request_ids_raw = self._parse_list_param(request.query_params, "request_ids")
+        requested_exam_ids_raw = self._parse_list_param(request.query_params, "requested_exam_ids")
+
+        if not sample_ids and not request_ids_raw and not requested_exam_ids_raw:
+            return Response(
+                {"error": "Provide at least one of: sample_ids, request_ids, requested_exam_ids."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            request_ids = [int(v) for v in request_ids_raw]
+            requested_exam_ids = [int(v) for v in requested_exam_ids_raw]
+        except ValueError:
+            return Response({"error": "IDs must be integers."}, status=status.HTTP_400_BAD_REQUEST)
+
+        field_result_qs = ExamFieldResult.objects.select_related(
+            "exam_field__measurement_unit",
+        ).order_by("exam_field__priority", "exam_field__id")
+
+        requested_exam_qs = RequestedExam.objects.select_related(
+            "exam_version__exam",
+        ).prefetch_related(
+            Prefetch("field_results", queryset=field_result_qs),
+        ).order_by("id")
+
+        if requested_exam_ids:
+            requested_exam_qs = requested_exam_qs.filter(id__in=requested_exam_ids)
+
+        sample_qs = Sample.objects.select_related("sample_type").prefetch_related(
+            Prefetch("requested_exams", queryset=requested_exam_qs),
+        ).order_by("id")
+
+        if sample_ids:
+            sample_qs = sample_qs.filter(id__in=sample_ids)
+
+        exam_request_qs = ExamRequest.objects.only("id", "code").prefetch_related(
+            Prefetch("samples", queryset=sample_qs),
+        )
+
+        if request_ids:
+            exam_request_qs = exam_request_qs.filter(id__in=request_ids)
+        elif sample_ids:
+            exam_request_qs = exam_request_qs.filter(samples__id__in=sample_ids).distinct()
+        elif requested_exam_ids:
+            exam_request_qs = exam_request_qs.filter(
+                requested_exams__id__in=requested_exam_ids
+            ).distinct()
+
+        payload = []
+        for exam_request in exam_request_qs:
+            samples_payload = []
+            for sample in exam_request.samples.all():
+                exams_payload = []
+                for req_exam in sample.requested_exams.all():
+                    exam = req_exam.exam_version.exam
+                    field_results_payload = [
+                        {
+                            "id": fr.id,
+                            "field_name": fr.exam_field.name,
+                            "field_code": fr.exam_field.code,
+                            "raw_value": fr.raw_value,
+                            "computed_value": fr.computed_value,
+                            "classification": fr.classification,
+                            "measurement_unit": None if fr.exam_field.measurement_unit is None else {
+                                "name": fr.exam_field.measurement_unit.name,
+                                "code": fr.exam_field.measurement_unit.code,
+                            },
+                        }
+                        for fr in req_exam.field_results.all()
+                    ]
+                    exams_payload.append(
+                        {
+                            "requested_exam_id": req_exam.id,
+                            "is_completed": req_exam.is_completed,
+                            "exam": {"id": exam.id, "code": exam.code, "name": exam.name},
+                            "field_results": field_results_payload,
+                        }
+                    )
+                samples_payload.append(
+                    {
+                        "id": sample.id,
+                        "sample_type": {"id": sample.sample_type.id, "name": sample.sample_type.name},
+                        "exams": exams_payload,
+                    }
+                )
+            payload.append({"request": {"id": exam_request.id, "code": exam_request.code}, "samples": samples_payload})
+
+        return Response(payload, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=["post"], permission_classes=[IsProfessional])
     def cancel(self, request, pk=None):
         exam_request = self.get_object()
