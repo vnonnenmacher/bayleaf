@@ -1,4 +1,5 @@
 import random
+import string
 import time
 
 from django.core.management.base import BaseCommand
@@ -93,6 +94,7 @@ class Command(BaseCommand):
                 patient=patient,
                 requested_by=professional,
                 exam_versions=chosen_exams,
+                code=self._generate_code(),
             )
             created_count += 1
 
@@ -105,6 +107,12 @@ class Command(BaseCommand):
 
         if created_count == 0:
             self.stdout.write("No requests created this iteration.")
+
+    @staticmethod
+    def _generate_code() -> str:
+        letters = random.choices(string.ascii_uppercase, k=2)
+        digits = random.choices(string.digits, k=10)
+        return "".join(letters + digits)
 
     def _maybe_cancel_requests(self, helper: ExamRequestHelper) -> None:
         active_requests = ExamRequest.objects.filter(

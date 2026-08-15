@@ -612,6 +612,70 @@ Response is paginated and each row has:
 - `samples`: each sample with sample type, current state, and `exams` list.
 - `exams`: requested exam items with completion state and exam metadata. Exam result values are intentionally omitted.
 
+Example response (`GET /api/lab/exam-requests/search-exam-requests/?is_completed=true`):
+
+```json
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "request": {
+        "id": 42,
+        "code": "REQ-1001",
+        "notes": "Fasting sample",
+        "created_at": "2026-08-13T10:14:22.031229+00:00",
+        "updated_at": "2026-08-13T10:16:01.812014+00:00",
+        "is_validated": true,
+        "validated_by": {
+          "id": "fce8e4fd-0f77-4e87-903b-4477a0476a90",
+          "full_name": "Dr. John Carter"
+        },
+        "requested_by": {
+          "id": "fce8e4fd-0f77-4e87-903b-4477a0476a90",
+          "full_name": "Dr. John Carter"
+        },
+        "patient": {
+          "pid": "b2f03d61-9a67-4f26-b919-68f25e23135f",
+          "first_name": "Maria",
+          "last_name": "Silva",
+          "birth_date": "1992-04-17"
+        }
+      },
+      "samples": [
+        {
+          "id": "0da11fec-95fa-45f4-aac8-18f00dd48ac1",
+          "sample_type": {
+            "id": 1,
+            "name": "Blood"
+          },
+          "current_state": {
+            "id": 2,
+            "name": "Processing"
+          },
+          "exams": [
+            {
+              "requested_exam_id": 101,
+              "is_completed": true,
+              "exam_version_id": 18,
+              "exam": {
+                "id": 7,
+                "code": "GLU",
+                "name": "Glucose",
+                "sector": null
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+When `is_completed=true` (or `false`) is provided, each sample keeps the same tree shape but only includes exam items that match the completion filter.
+
 ### Search and injection actions
 
 - `GET /api/lab/sectors/term-search/?term=<text>` and `GET /api/lab/equipments/term-search/?term=<text>` perform case-insensitive name search. Missing term returns `400`.
