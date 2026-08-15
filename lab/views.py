@@ -344,6 +344,8 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
         sample_ids = self._parse_list_param(request.query_params, "sample_ids")
         request_ids_raw = self._parse_list_param(request.query_params, "request_ids")
         requested_exam_ids_raw = self._parse_list_param(request.query_params, "requested_exam_ids")
+        is_completed = self._parse_bool(request.query_params.get("is_completed"))
+        is_validated = self._parse_bool(request.query_params.get("is_validated"))
 
         if not sample_ids and not request_ids_raw and not requested_exam_ids_raw:
             return Response(
@@ -369,6 +371,8 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
 
         if requested_exam_ids:
             requested_exam_qs = requested_exam_qs.filter(id__in=requested_exam_ids)
+        if is_completed is not None:
+            requested_exam_qs = requested_exam_qs.filter(is_completed=is_completed)
 
         sample_qs = Sample.objects.select_related("sample_type").prefetch_related(
             Prefetch("requested_exams", queryset=requested_exam_qs),
@@ -377,9 +381,12 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
         if sample_ids:
             sample_qs = sample_qs.filter(id__in=sample_ids)
 
-        exam_request_qs = ExamRequest.objects.only("id", "code").prefetch_related(
+        exam_request_qs = ExamRequest.objects.only("id", "code", "is_validated").prefetch_related(
             Prefetch("samples", queryset=sample_qs),
         )
+
+        if is_validated is not None:
+            exam_request_qs = exam_request_qs.filter(is_validated=is_validated)
 
         if request_ids:
             exam_request_qs = exam_request_qs.filter(id__in=request_ids)
@@ -391,11 +398,15 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
             ).distinct()
 
         payload = []
+        requested_exam_id_set = set(requested_exam_ids) if requested_exam_ids else None
         for exam_request in exam_request_qs:
             samples_payload = []
             for sample in exam_request.samples.all():
                 exams_payload = []
                 for req_exam in sample.requested_exams.all():
+                    # explicit guard in case the prefetch doesn't filter in all Django versions
+                    if requested_exam_id_set and req_exam.id not in requested_exam_id_set:
+                        continue
                     exam = req_exam.exam_version.exam
                     field_results_payload = [
                         {
@@ -420,6 +431,8 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
                             "field_results": field_results_payload,
                         }
                     )
+                if not exams_payload:
+                    continue
                 samples_payload.append(
                     {
                         "id": sample.id,
@@ -427,7 +440,7 @@ class ExamRequestViewSet(viewsets.ModelViewSet):
                         "exams": exams_payload,
                     }
                 )
-            payload.append({"request": {"id": exam_request.id, "code": exam_request.code}, "samples": samples_payload})
+            payload.append({"request": {"id": exam_request.id, "code": exam_request.code, "is_validated": exam_request.is_validated}, "samples": samples_payload})
 
         return Response(payload, status=status.HTTP_200_OK)
 

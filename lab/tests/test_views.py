@@ -451,3 +451,41 @@ def test_fetch_results_blocks_non_professional(api_client, user):
     response = api_client.get(url, {"request_ids": "1"})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_fetch_results_filters_by_is_completed(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+    exam_request, _ = _make_exam_request(patient, professional, sample_type, "KFILT")
+
+    req_exam = RequestedExam.objects.get(exam_request=exam_request)
+    req_exam.is_completed = True
+    req_exam.save(update_fields=["is_completed"])
+
+    url = reverse("examrequest-fetch-results")
+    response_true = api_client.get(url, {"request_ids": exam_request.id, "is_completed": "true"})
+    response_false = api_client.get(url, {"request_ids": exam_request.id, "is_completed": "false"})
+
+    assert response_true.status_code == status.HTTP_200_OK
+    assert len(response_true.data[0]["samples"][0]["exams"]) == 1
+
+    assert response_false.status_code == status.HTTP_200_OK
+    # sample is pruned because no exams match, so the request has an empty samples list
+    assert response_false.data[0]["samples"] == []
+
+
+@pytest.mark.django_db
+def test_fetch_results_filters_by_is_validated(api_client, professional, patient, sample_type):
+    api_client.force_authenticate(user=professional)
+    exam_request, _ = _make_exam_request(patient, professional, sample_type, "VFILT")
+
+    url = reverse("examrequest-fetch-results")
+    response_not_validated = api_client.get(url, {"request_ids": exam_request.id, "is_validated": "false"})
+    response_validated = api_client.get(url, {"request_ids": exam_request.id, "is_validated": "true"})
+
+    assert response_not_validated.status_code == status.HTTP_200_OK
+    assert len(response_not_validated.data) == 1
+    assert response_not_validated.data[0]["request"]["is_validated"] is False
+
+    assert response_validated.status_code == status.HTTP_200_OK
+    assert len(response_validated.data) == 0

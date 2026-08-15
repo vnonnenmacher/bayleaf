@@ -689,6 +689,8 @@ Professional only. Returns exam field results grouped by request → sample → 
 | `request_ids` | int (repeatable or comma-separated) | Filter by exam request IDs |
 | `sample_ids` | UUID (repeatable or comma-separated) | Filter by sample IDs |
 | `requested_exam_ids` | int (repeatable or comma-separated) | Filter by requested exam IDs |
+| `is_completed` | `true`\|`false` | Keep only exams matching completion state |
+| `is_validated` | `true`\|`false` | Keep only requests matching validation state |
 
 Missing all three filters returns `400 {"error":"..."}`.
 
@@ -699,7 +701,8 @@ Missing all three filters returns `400 {"error":"..."}`.
   {
     "request": {
       "id": 42,
-      "code": "LC5647253242"
+      "code": "LC5647253242",
+      "is_validated": false
     },
     "samples": [
       {
