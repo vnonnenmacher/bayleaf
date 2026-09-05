@@ -462,41 +462,260 @@ The response is the appointment list shape. Invalid lifecycle transitions return
 
 ## Documents
 
-All document endpoints require a professional who belongs to an organization. Objects are strictly scoped to the first organization assigned to that professional.
+All document endpoints require a professional JWT. Documents are scoped to the professional's organization. If the authenticated professional has no organization, one is automatically created using their email address as the organization name.
 
-Document shape:
+### Document shape
+
+Every document response includes a `download_url` field. For MinIO-backed documents this is a presigned, time-limited GET URL generated on every response; for external references it is the raw reference string; for documents with no stored reference yet it is `null`.
 
 ```json
 {
-  "id": "uuid",
-  "org": 1,
-  "doc_key": "patient/uuid/report",
-  "name": "Blood report",
-  "reference": "minio://bucket/object-key",
-  "mime_type": "application/pdf",
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "org": "9e4b1c12-0000-0000-0000-000000000001",
+  "path": "radiology.2024",
+  "doc_key": "7d9e1f2a-3b4c-5d6e-7f8a-9b0c1d2e3f4a",
+  "name": "chest_xray",
+  "file_name": "chest_xray.dcm",
+  "reference": "minio://bayleaf-docs/org/uuid/documents/uuid/uuid/chest_xray.dcm",
+  "mime_type": "application/dicom",
+  "source": "minio",
   "description": "",
-  "tags": ["lab", "blood"],
-  "size_bytes": 1234,
-  "content_hash": "sha256",
-  "created_by": 12,
-  "created_at": "ISO-8601 datetime",
-  "updated_at": "ISO-8601 datetime"
+  "tags": ["radiology", "xray"],
+  "size_bytes": 512000,
+  "md5sum": "d41d8cd98f00b204e9800998ecf8427e",
+  "version": "v2",
+  "parent_document": "3fa85f64-0000-0000-0000-000000000099",
+  "created_by": "did-uuid",
+  "created_at": "2026-08-27T14:00:00Z",
+  "updated_at": "2026-08-27T14:00:00Z",
+  "download_url": "https://minio.example.com/bayleaf-docs/...?X-Amz-Expires=3600&..."
 }
 ```
 
-### `GET|POST /api/documents/`
+Field reference:
 
-GET filters: exact `doc_key`, prefix `search_doc_key`, case-insensitive `search_name`, exact `mime_type`, and repeated `tags` (all supplied tags must be present).
+| Field | Writable | Notes |
+| --- | --- | --- |
+| `id` | no | UUID, assigned by the server |
+| `org` | no | UUID of the owning organization, assigned by the server |
+| `path` | yes | Dot-separated grouping path, e.g. `"radiology.2024"` or `"patients.uuid.labs"`. `null` means root level. |
+| `doc_key` | yes | Short opaque lookup key. Auto-generated as a UUID4 if omitted. Must be unique within the organization. |
+| `name` | yes | Human-readable document title. Defaults to the filename stem when omitted. |
+| `file_name` | no | Original filename as uploaded. Set by the server on file upload; empty for external references. |
+| `reference` | yes | Storage URI. Populated automatically on file upload (`minio://bucket/key`). For external references, supply the URI directly. |
+| `mime_type` | yes | Inferred from the uploaded file when omitted. Required when supplying only a `reference`. |
+| `source` | yes | `"minio"` (default), `"ad"`, or `"other"`. Set automatically to `"minio"` on file upload. |
+| `description` | yes | Free-text description. |
+| `tags` | yes | JSON array of tag strings. |
+| `size_bytes` | no | Set by the server from the uploaded file. |
+| `md5sum` | no | MD5 hex digest of the uploaded file. Set by the server. |
+| `version` | yes | Optional version label, e.g. `"v1"`, `"2026-08-27"`. |
+| `parent_document` | yes | UUID of the previous version of this document. `null` if this is the first version. |
+| `created_by` | no | DID of the professional who created the document. |
+| `created_at` | no | ISO 8601 datetime. |
+| `updated_at` | no | ISO 8601 datetime. |
+| `download_url` | no | Presigned URL (MinIO) or raw reference. Expires per server configuration. |
 
-POST accepts either multipart `file` or an external `reference`. With a reference, `mime_type` is required. `name` is inferred from the filename/reference when omitted. Uploaded files populate `reference`, size, hash, and MIME type. The backend assigns `org` and `created_by`.
+---
 
-### `GET|PUT|PATCH|DELETE /api/documents/{uuid}/`
+### `GET /api/documents/`
 
-Reads, changes, or deletes an organization-scoped document. A replacement `file` can be supplied on update.
+Authenticated professional. Returns a paginated list of all documents belonging to the caller's organization.
+
+**Query parameters:**
+
+| Parameter | Description |
+| --- | --- |
+| `doc_key` | Exact match on `doc_key`. |
+| `search_doc_key` | Prefix match on `doc_key`. |
+| `search_name` | Case-insensitive substring match on `name`. |
+| `mime_type` | Exact match on `mime_type`. |
+| `tags` | Repeatable. All supplied tags must be present (AND). |
+
+**Response `200 OK`:**
+
+```json
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "org": "9e4b1c12-0000-0000-0000-000000000001",
+      "path": "radiology.2024",
+      "doc_key": "7d9e1f2a-3b4c-5d6e-7f8a-9b0c1d2e3f4a",
+      "name": "chest_xray",
+      "file_name": "chest_xray.dcm",
+      "reference": "minio://bayleaf-docs/org/uuid/documents/uuid/uuid/chest_xray.dcm",
+      "mime_type": "application/dicom",
+      "source": "minio",
+      "description": "",
+      "tags": ["radiology"],
+      "size_bytes": 512000,
+      "md5sum": "d41d8cd98f00b204e9800998ecf8427e",
+      "version": null,
+      "parent_document": null,
+      "created_by": "did-uuid",
+      "created_at": "2026-08-27T14:00:00Z",
+      "updated_at": "2026-08-27T14:00:00Z",
+      "download_url": "https://minio.example.com/...?X-Amz-Expires=3600&..."
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/documents/`
+
+Authenticated professional. Creates a document. The only required field is either `file` (multipart upload) or `reference` (external URI). Everything else has a sensible default.
+
+**Request — file upload (multipart/form-data):**
+
+```
+POST /api/documents/
+Content-Type: multipart/form-data
+
+file=<binary>
+path=radiology.2024
+description=Chest X-Ray taken in consultation
+tags=["radiology","xray"]
+version=v1
+```
+
+Minimum valid file-upload request: only `file` is required. All other fields are optional and will be inferred or defaulted by the server.
+
+`name`, `doc_key`, `mime_type`, `source` are all optional; the server fills them in from the uploaded file.
+
+**Request — external reference (application/json):**
+
+```json
+{
+  "reference": "https://records.hospital.org/patient/12345/ecg.pdf",
+  "mime_type": "application/pdf",
+  "name": "ECG Report",
+  "source": "other",
+  "path": "cardiology.2024",
+  "tags": ["ecg", "cardiology"]
+}
+```
+
+Minimum valid reference request: `reference` and `mime_type` are required. `name`, `doc_key`, `source`, and other metadata are optional and can be generated by the server.
+
+`mime_type` is required when no `file` is supplied.
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "org": "9e4b1c12-0000-0000-0000-000000000001",
+  "path": "radiology.2024",
+  "doc_key": "7d9e1f2a-3b4c-5d6e-7f8a-9b0c1d2e3f4a",
+  "name": "chest_xray",
+  "file_name": "chest_xray.dcm",
+  "reference": "minio://bayleaf-docs/org/uuid/documents/uuid/uuid/chest_xray.dcm",
+  "mime_type": "application/dicom",
+  "source": "minio",
+  "description": "Chest X-Ray taken in consultation",
+  "tags": ["radiology", "xray"],
+  "size_bytes": 512000,
+  "md5sum": "d41d8cd98f00b204e9800998ecf8427e",
+  "version": "v1",
+  "parent_document": null,
+  "created_by": "did-uuid",
+  "created_at": "2026-08-27T14:00:00Z",
+  "updated_at": "2026-08-27T14:00:00Z",
+  "download_url": "https://minio.example.com/...?X-Amz-Expires=3600&..."
+}
+```
+
+**Versioning example** — uploading a new version of an existing document:
+
+```
+POST /api/documents/
+Content-Type: multipart/form-data
+
+file=<binary>
+name=chest_xray_updated
+path=radiology.2024
+version=v2
+parent_document=3fa85f64-5717-4562-b3fc-2c963f66afa6
+```
+
+The server creates a new independent document record and links it back to the original via `parent_document`. The original document is not modified. All versions in the chain can be retrieved from `GET /api/documents/?search_name=chest_xray`.
+
+**Error responses:**
+
+| Status | Body | Reason |
+| --- | --- | --- |
+| `400` | `{"reference": "Either 'reference' or 'file' must be provided."}` | Neither field supplied on create |
+| `400` | `{"mime_type": "This field is required when no file is uploaded."}` | `reference` supplied without `mime_type` |
+| `403` | `{"detail": "Authenticated user is not a professional."}` | Caller is not a professional |
+
+---
+
+### `GET /api/documents/{uuid}/`
+
+Authenticated professional. Returns a single document scoped to the caller's organization.
+
+**Response `200 OK`:** the full document shape above.
+
+**Error responses:** `403` if not a professional; `404` if the UUID does not exist or belongs to a different organization.
+
+---
+
+### `PUT|PATCH /api/documents/{uuid}/`
+
+Authenticated professional. Updates a document. PATCH is recommended for partial changes. A new `file` can be supplied to replace the stored file; the server re-uploads and updates `reference`, `file_name`, `size_bytes`, `md5sum`, `mime_type`, and `source` automatically.
+
+**PATCH request — metadata only:**
+
+```json
+{
+  "name": "Chest X-Ray 2024 (revised)",
+  "tags": ["radiology", "xray", "reviewed"],
+  "description": "Reviewed by Dr. Smith on 2026-08-27"
+}
+```
+
+**PATCH request — replace file:**
+
+```
+PATCH /api/documents/3fa85f64-5717-4562-b3fc-2c963f66afa6/
+Content-Type: multipart/form-data
+
+file=<new binary>
+version=v3
+```
+
+**Response `200 OK`:** the updated document shape, including the refreshed `download_url`.
+
+---
+
+### `DELETE /api/documents/{uuid}/`
+
+Authenticated professional. Deletes the document record. The underlying file in MinIO is **not** automatically removed by this operation.
+
+**Response `204 No Content`.**
+
+---
 
 ### `GET /api/documents/{uuid}/download-url/`
 
-Returns `{"url":"...","expires_in":<seconds-or-null>}`. MinIO references become presigned URLs; external references are returned unchanged.
+Authenticated professional. Returns a fresh presigned download URL for the document without fetching the full document body. Useful when the `download_url` from a previous response has expired.
+
+**Response `200 OK`:**
+
+```json
+{
+  "url": "https://minio.example.com/bayleaf-docs/org/uuid/documents/uuid/uuid/file.pdf?X-Amz-Expires=3600&...",
+  "expires_in": 3600
+}
+```
+
+For documents backed by a non-MinIO reference, `url` is the raw `reference` string and `expires_in` is `null`. `404` if the document is not found in the caller's organization.
 
 ## Medications
 

@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.models import Organization
 from documents.models import Document
 from documents.serializers import DocumentSerializer
 from documents.storage import get_documents_storage_client
@@ -12,7 +13,7 @@ from professionals.models import Professional
 from professionals.permissions import IsProfessional
 
 
-def _get_professional_org_or_403(request):
+def _get_or_create_professional_org(request):
     professional = (
         Professional.objects.filter(user_ptr_id=request.user.id)
         .prefetch_related("organizations")
@@ -23,7 +24,17 @@ def _get_professional_org_or_403(request):
 
     organization = professional.organizations.order_by("name", "id").first()
     if not organization:
-        raise PermissionDenied("Professional must belong to an organization.")
+        import re
+        from uuid import uuid4
+
+        email = request.user.email
+        slug = re.sub(r"[^a-z0-9]+", "_", email.lower()).strip("_")[:55] or "org"
+        code = f"{slug}_{str(uuid4())[:8]}"
+        organization, _ = Organization.objects.get_or_create(
+            name=email,
+            defaults={"code": code},
+        )
+        professional.organizations.add(organization)
 
     return organization
 
@@ -44,7 +55,7 @@ class DocumentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsProfessional]
 
     def get_queryset(self):
-        organization = _get_professional_org_or_403(self.request)
+        organization = _get_or_create_professional_org(self.request)
         queryset = Document.objects.filter(org_id=organization.id).order_by("name", "doc_key")
 
         doc_key = self.request.query_params.get("doc_key")
@@ -77,7 +88,7 @@ class DocumentListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
-        organization = _get_professional_org_or_403(self.request)
+        organization = _get_or_create_professional_org(self.request)
         serializer.save(org=organization)
 
 
@@ -86,7 +97,7 @@ class DocumentRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsProfessional]
 
     def get_queryset(self):
-        organization = _get_professional_org_or_403(self.request)
+        organization = _get_or_create_professional_org(self.request)
         return Document.objects.filter(org_id=organization.id)
 
 
@@ -94,7 +105,7 @@ class DocumentDownloadURLView(APIView):
     permission_classes = [IsProfessional]
 
     def get(self, request, pk):
-        organization = _get_professional_org_or_403(request)
+        organization = _get_or_create_professional_org(request)
         document = generics.get_object_or_404(Document, id=pk, org_id=organization.id)
 
         bucket, object_key = _parse_minio_reference(document.reference)

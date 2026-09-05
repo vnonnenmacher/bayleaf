@@ -13,36 +13,78 @@ from professionals.models import Professional
 class DocumentSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True, required=False)
     name = serializers.CharField(required=False, allow_blank=True)
+    doc_key = serializers.CharField(required=False, allow_blank=True, default="")
     reference = serializers.CharField(required=False, allow_blank=True)
     mime_type = serializers.CharField(required=False, allow_blank=True)
+    download_url = serializers.SerializerMethodField()
+
+    @staticmethod
+    def _name_to_doc_key(name):
+        base = (name or "").strip()
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip("-._ ")
+        return cleaned or "document"
+
+    def to_internal_value(self, data):
+        data = data.copy()
+
+        name_value = (data.get("name") or "").strip()
+        if not name_value and "file" in data and getattr(data["file"], "name", None):
+            name_value = self._name_from_filename(data["file"].name)
+            data["name"] = name_value
+
+        return super().to_internal_value(data)
 
     class Meta:
         model = Document
         fields = [
             "id",
             "org",
+            "path",
             "doc_key",
             "name",
+            "file_name",
             "reference",
             "mime_type",
+            "source",
             "description",
             "tags",
             "size_bytes",
-            "content_hash",
+            "md5sum",
+            "version",
+            "parent_document",
             "created_by",
             "created_at",
             "updated_at",
             "file",
+            "download_url",
         ]
         read_only_fields = [
             "id",
             "org",
+            "file_name",
             "size_bytes",
-            "content_hash",
+            "md5sum",
             "created_by",
             "created_at",
             "updated_at",
+            "download_url",
         ]
+
+    def get_download_url(self, obj):
+        if not obj.reference:
+            return None
+        if not obj.reference.startswith("minio://"):
+            return obj.reference
+        payload = obj.reference[len("minio://"):]
+        parts = payload.split("/", 1)
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            return None
+        bucket, object_key = parts
+        try:
+            storage = get_documents_storage_client()
+            return storage.presign_get(bucket, object_key)
+        except Exception:
+            return None
 
     def validate(self, attrs):
         file_obj = attrs.get("file")
@@ -82,10 +124,15 @@ class DocumentSerializer(serializers.ModelSerializer):
         if professional:
             validated_data["created_by"] = professional
 
+        doc_key = validated_data.get("doc_key")
+        if not doc_key:
+            validated_data["doc_key"] = self._name_to_doc_key(validated_data.get("name") or "")
+
         document = Document(**validated_data)
+        document.save()
         if upload:
             self._upload_file_to_storage(document=document, upload=upload)
-        document.save()
+            document.save()
         return document
 
     def update(self, instance, validated_data):
@@ -113,12 +160,14 @@ class DocumentSerializer(serializers.ModelSerializer):
         content_type = document.mime_type or upload.content_type or "application/octet-stream"
 
         storage = get_documents_storage_client()
-        size_bytes, sha256 = storage.upload_fileobj(upload.file, bucket, object_key, content_type)
+        size_bytes, md5 = storage.upload_fileobj(upload.file, bucket, object_key, content_type)
 
+        document.file_name = original_filename
         document.reference = f"minio://{bucket}/{object_key}"
+        document.source = Document.Source.MINIO
         document.mime_type = content_type
         document.size_bytes = size_bytes
-        document.content_hash = sha256
+        document.md5sum = md5
 
     def _name_from_filename(self, filename):
         base_name = os.path.basename(filename)
