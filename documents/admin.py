@@ -16,5 +16,5 @@ class DocumentAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_filter = ("mime_type", "org")
-    search_fields = ("doc_key", "name", "reference", "description", "content_hash")
+    search_fields = ("doc_key", "name", "reference", "description", "md5sum")
     autocomplete_fields = ("created_by",)

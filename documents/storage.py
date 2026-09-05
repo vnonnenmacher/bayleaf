@@ -15,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover
 class _HashingReader:
     def __init__(self, fileobj):
         self.fileobj = fileobj
-        self.hasher = hashlib.sha256()
+        self.hasher = hashlib.md5(usedforsecurity=False)
         self.total_read = 0
 
     def read(self, size=-1):

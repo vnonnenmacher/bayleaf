@@ -4,6 +4,11 @@ from django.db import models
 
 
 class Document(models.Model):
+    class Source(models.TextChoices):
+        MINIO = "minio", "MinIO"
+        AD = "ad", "Active Directory"
+        OTHER = "other", "Other"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     org = models.ForeignKey(
         "core.Organization",
@@ -12,14 +17,26 @@ class Document(models.Model):
         null=True,
         blank=True,
     )
-    doc_key = models.CharField(max_length=128)
+    # dot-separated grouping path, e.g. "radiology.2024"; null means root
+    path = models.CharField(max_length=1024, blank=True, null=True)
+    doc_key = models.CharField(max_length=128, blank=True)
     name = models.CharField(max_length=255)
-    reference = models.CharField(max_length=1024)
-    mime_type = models.CharField(max_length=128)
+    file_name = models.CharField(max_length=512, blank=True)
+    reference = models.CharField(max_length=1024, blank=True)
+    mime_type = models.CharField(max_length=128, blank=True)
+    source = models.CharField(max_length=32, choices=Source.choices, default=Source.MINIO)
     description = models.TextField(blank=True)
     tags = models.JSONField(default=list, blank=True)
     size_bytes = models.BigIntegerField(null=True, blank=True)
-    content_hash = models.CharField(max_length=64, blank=True)
+    md5sum = models.CharField(max_length=32, blank=True)
+    version = models.CharField(max_length=64, blank=True, null=True)
+    parent_document = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="versions",
+    )
     created_by = models.ForeignKey(
         "professionals.Professional",
         on_delete=models.SET_NULL,
